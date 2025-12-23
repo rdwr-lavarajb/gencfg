@@ -25,17 +25,25 @@ from phase2.default_calculator import DefaultCalculator
 class ConfigNormalizer:
     """Main orchestrator for Phase 2"""
     
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, force: bool = False):
         """
         Initialize normalizer
         
         Args:
             api_key: OpenAI API key (or set OPENAI_API_KEY env var)
+            force: Force regeneration of all templates (default: incremental)
         """
         self.value_extractor = ValueExtractor()
         self.ai_analyzer = AIAnalyzer(api_key)
         self.template_generator = TemplateGenerator()
         self.default_calculator = DefaultCalculator()
+        self.force = force
+        
+        # State tracking
+        self.templates_dir = Path("data/templates")
+        self.templates_dir.mkdir(parents=True, exist_ok=True)
+        self.state_file = self.templates_dir / "template_state.json"
+        self.processed_paths: Dict[str, Dict] = self._load_state()
         
         self.stats = {
             'modules_processed': 0,
@@ -45,6 +53,46 @@ class ConfigNormalizer:
             'errors': 0,
             'start_time': None,
             'end_time': None
+        }
+    
+    def _load_state(self) -> Dict[str, Dict]:
+        """Load previously processed module paths"""
+        if self.state_file.exists():
+            try:
+                with open(self.state_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                return state.get('processed_paths', {})
+            except Exception as e:
+                print(f"⚠️  Warning: Could not load state file: {e}")
+        return {}
+    
+    def _save_state(self):
+        """Save state of processed module paths"""
+        state = {
+            'last_updated': datetime.now().isoformat(),
+            'processed_paths': self.processed_paths
+        }
+        with open(self.state_file, 'w', encoding='utf-8') as f:
+            json.dump(state, f, indent=2)
+    
+    def _should_process_path(self, module_path: str, modules_count: int) -> bool:
+        """Check if module path should be processed"""
+        if self.force:
+            return True
+        
+        if module_path in self.processed_paths:
+            last_count = self.processed_paths[module_path].get('modules_count', 0)
+            # Reprocess if module count changed (new instances added)
+            if modules_count == last_count:
+                return False
+        
+        return True
+    
+    def _mark_path_processed(self, module_path: str, modules_count: int):
+        """Mark module path as processed"""
+        self.processed_paths[module_path] = {
+            'modules_count': modules_count,
+            'processed_at': datetime.now().isoformat()
         }
     
     def normalize_from_file(self, input_file: str, output_dir: str = "data/templates"):
@@ -57,6 +105,10 @@ class ConfigNormalizer:
         """
         print("=" * 70)
         print("Phase 2: Configuration Normalization & Templating")
+        if self.force:
+            print("[FORCE MODE: Regenerating all templates]")
+        else:
+            print("[INCREMENTAL MODE: Generating templates for new/modified modules only]")
         print("=" * 70)
         print()
         
@@ -75,16 +127,35 @@ class ConfigNormalizer:
         print("🔍 Grouping modules by path...")
         grouped_modules = self._group_modules_by_path(modules)
         print(f"✅ Found {len(grouped_modules)} unique module paths")
+        
+        # Check which paths need processing
+        paths_to_process = {}
+        skipped_paths = []
+        
+        for module_path, module_group in grouped_modules.items():
+            if self._should_process_path(module_path, len(module_group)):
+                paths_to_process[module_path] = module_group
+            else:
+                skipped_paths.append(module_path)
+        
+        if skipped_paths:
+            print(f"⏭️  Skipping {len(skipped_paths)} unchanged module paths")
+        print(f"🔄 Processing {len(paths_to_process)} module paths")
         print()
+        
+        if not paths_to_process:
+            print("✅ All templates are up to date. Use --force to regenerate all templates.")
+            return
         
         # Process each group
         templates = []
-        for i, (module_path, module_group) in enumerate(grouped_modules.items(), 1):
-            print(f"[{i}/{len(grouped_modules)}] Processing: {module_path} ({len(module_group)} instances)")
+        for i, (module_path, module_group) in enumerate(paths_to_process.items(), 1):
+            print(f"[{i}/{len(paths_to_process)}] Processing: {module_path} ({len(module_group)} instances)")
             
             try:
                 template = self._process_module_group(module_path, module_group)
                 templates.append(template)
+                self._mark_path_processed(module_path, len(module_group))
                 print(f"  ✅ Template generated")
             except Exception as e:
                 print(f"  ❌ Error: {e}")
@@ -94,11 +165,14 @@ class ConfigNormalizer:
         
         self.stats['end_time'] = datetime.now()
         
-        # Save results
+        # Save results and state
         self._save_templates(templates, output_dir)
+        self._save_state()
+        print(f"💾 State saved to: {self.state_file}")
+        print()
         
         # Print summary
-        self._print_summary()
+        self._print_summary(len(skipped_paths))
     
     def _group_modules_by_path(self, modules: List[Dict]) -> Dict[str, List[Dict]]:
         """Group modules by their path"""
@@ -179,7 +253,7 @@ class ConfigNormalizer:
         print(f"💾 Templates saved to: {output_file}")
         print("=" * 70)
     
-    def _print_summary(self):
+    def _print_summary(self, skipped_count: int = 0):
         """Print processing summary"""
         processing_time = (self.stats['end_time'] - self.stats['start_time']).total_seconds()
         
@@ -189,6 +263,7 @@ class ConfigNormalizer:
         print("=" * 70)
         print(f"Modules Processed:       {self.stats['modules_processed']}")
         print(f"Templates Generated:     {self.stats['templates_generated']}")
+        print(f"Templates Skipped:       {skipped_count}")
         print(f"AI Calls Made:           {self.stats['ai_calls']}")
         print(f"Tokens Used:             {self.stats['tokens_used']:,}")
         print(f"Errors:                  {self.stats['errors']}")
@@ -214,6 +289,24 @@ class ConfigNormalizer:
 def main():
     """Main entry point"""
     import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Phase 2: Generate templates from parsed modules using AI',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python normalize_configs.py              # Process only new/modified modules
+  python normalize_configs.py --force      # Regenerate all templates
+        """
+    )
+    parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Force regeneration of all templates (default: generate only for new/modified modules)'
+    )
+    
+    args = parser.parse_args()
     
     # Check for API key
     api_key = os.getenv('OPENAI_API_KEY')
@@ -246,7 +339,7 @@ def main():
     print()
     
     # Run normalization
-    normalizer = ConfigNormalizer(api_key)
+    normalizer = ConfigNormalizer(api_key, force=args.force)
     normalizer.normalize_from_file(str(input_file))
 
 

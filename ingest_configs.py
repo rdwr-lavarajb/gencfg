@@ -16,15 +16,20 @@ from datetime import datetime
 class ConfigIngestion:
     """Handles ingestion and storage of parsed configurations"""
     
-    def __init__(self, config_dir: str = "configs", output_dir: str = "data/parsed"):
+    def __init__(self, config_dir: str = "configs", output_dir: str = "data/parsed", force: bool = False):
         self.config_dir = Path(config_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.parser = ConfigParser()
+        self.force = force
         
         # Track unique modules (for duplicate detection)
         self.unique_modules: Dict[str, ModuleBlock] = {}
         self.module_signatures: Set[str] = set()
+        
+        # State tracking
+        self.state_file = self.output_dir / "ingestion_state.json"
+        self.processed_files: Dict[str, Dict] = self._load_state()
         
     def _generate_signature(self, module: ModuleBlock) -> str:
         """Generate unique signature for duplicate detection"""
@@ -36,6 +41,50 @@ class ConfigIngestion:
             "\n".join(sorted(module.sub_lines))  # Sort for consistency
         ]
         return "|".join(sig_parts)
+    
+    def _load_state(self) -> Dict[str, Dict]:
+        """Load previously processed files state"""
+        if self.state_file.exists():
+            try:
+                with open(self.state_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                return state.get('processed_files', {})
+            except Exception as e:
+                print(f"⚠️  Warning: Could not load state file: {e}")
+        return {}
+    
+    def _save_state(self):
+        """Save state of processed files"""
+        state = {
+            'last_updated': datetime.now().isoformat(),
+            'processed_files': self.processed_files
+        }
+        with open(self.state_file, 'w', encoding='utf-8') as f:
+            json.dump(state, f, indent=2)
+    
+    def _should_process_file(self, config_file: Path) -> bool:
+        """Check if file should be processed based on modification time"""
+        if self.force:
+            return True
+        
+        file_key = config_file.name
+        file_mtime = config_file.stat().st_mtime
+        
+        if file_key in self.processed_files:
+            last_processed_mtime = self.processed_files[file_key].get('mtime', 0)
+            if file_mtime <= last_processed_mtime:
+                # File hasn't changed
+                return False
+        
+        return True
+    
+    def _mark_file_processed(self, config_file: Path, modules_count: int):
+        """Mark file as processed with current timestamp"""
+        self.processed_files[config_file.name] = {
+            'mtime': config_file.stat().st_mtime,
+            'processed_at': datetime.now().isoformat(),
+            'modules_count': modules_count
+        }
     
     def _is_duplicate(self, module: ModuleBlock) -> bool:
         """Check if module is a duplicate"""
@@ -65,6 +114,10 @@ class ConfigIngestion:
         """Main ingestion process"""
         print("=" * 60)
         print("Configuration Ingestion - Phase 1")
+        if self.force:
+            print("[FORCE MODE: Processing all files]")
+        else:
+            print("[INCREMENTAL MODE: Processing new/modified files only]")
         print("=" * 60)
         print()
         
@@ -75,13 +128,30 @@ class ConfigIngestion:
             print(f"   Please add .txt, .cfg, or .conf files to the configs/ directory")
             return
         
+        # Check which files need processing
+        files_to_process = []
+        skipped_files = []
+        
+        for config_file in config_files:
+            if self._should_process_file(config_file):
+                files_to_process.append(config_file)
+            else:
+                skipped_files.append(config_file)
+        
         print(f"📂 Found {len(config_files)} configuration file(s)")
+        if skipped_files:
+            print(f"⏭️  Skipping {len(skipped_files)} unchanged file(s)")
+        print(f"🔄 Processing {len(files_to_process)} file(s)")
         print()
+        
+        if not files_to_process:
+            print("✅ All files are up to date. Use --force to reprocess all files.")
+            return
         
         total_modules = 0
         duplicates_found = 0
         
-        for config_file in config_files:
+        for config_file in files_to_process:
             print(f"📄 Processing: {config_file.name}")
             
             try:
@@ -104,6 +174,9 @@ class ConfigIngestion:
                       f"{len(modules) - unique_from_file} duplicates)")
                 total_modules += len(modules)
                 
+                # Mark as processed
+                self._mark_file_processed(config_file, len(modules))
+                
             except Exception as e:
                 print(f"   ❌ Error parsing {config_file.name}: {e}")
         
@@ -111,13 +184,18 @@ class ConfigIngestion:
         print("=" * 60)
         print("Summary")
         print("=" * 60)
+        print(f"Files processed:          {len(files_to_process)}")
+        print(f"Files skipped:            {len(skipped_files)}")
         print(f"Total modules parsed:     {total_modules}")
         print(f"Unique modules:           {len(self.unique_modules)}")
         print(f"Duplicates removed:       {duplicates_found}")
         print()
         
-        # Save results
+        # Save results and state
         self._save_results()
+        self._save_state()
+        print(f"💾 State saved to: {self.state_file}")
+        print()
     
     def _save_results(self):
         """Save parsed modules to JSON file"""
@@ -178,7 +256,26 @@ class ConfigIngestion:
 
 def main():
     """Main entry point"""
-    ingestion = ConfigIngestion()
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Phase 1: Parse configuration files into modules',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python ingest_configs.py              # Process only new/modified files
+  python ingest_configs.py --force      # Reprocess all files
+        """
+    )
+    parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Force reprocessing of all config files (default: process only new/modified files)'
+    )
+    
+    args = parser.parse_args()
+    
+    ingestion = ConfigIngestion(force=args.force)
     ingestion.ingest_all()
     
     # Display statistics

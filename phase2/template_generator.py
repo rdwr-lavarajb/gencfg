@@ -52,6 +52,11 @@ class TemplatedModule:
     # Dependencies
     dependencies: Dict[str, List[str]] = field(default_factory=lambda: {'requires': [], 'required_by': []})
     
+    # Form Factor Support (VA, SA, VX, vADC)
+    supported_form_factors: List[str] = field(default_factory=list)  # Form factors this template applies to
+    form_factor_distribution: Dict[str, int] = field(default_factory=dict)  # Count by form factor
+    hypervisor_support: Optional[str] = None  # For VA: aws, azure, gcp, or None
+    
     # Metadata
     created_at: str = ""
     ai_model: str = "gpt-4-turbo"
@@ -117,6 +122,9 @@ class TemplateGenerator:
         # Detect variations
         variations = self._detect_variations(modules)
         
+        # Collect form factor information
+        form_factor_info = self._collect_form_factors(modules)
+        
         # Create templated module
         templated = TemplatedModule(
             module_path=module_path,
@@ -129,7 +137,10 @@ class TemplateGenerator:
             parameters=parameters,
             examples_seen=len(modules),
             variations=variations,
-            dependencies=ai_analysis.dependencies
+            dependencies=ai_analysis.dependencies,
+            supported_form_factors=form_factor_info['supported'],
+            form_factor_distribution=form_factor_info['distribution'],
+            hypervisor_support=form_factor_info['hypervisor']
         )
         
         self.stats['templates_generated'] += 1
@@ -285,6 +296,40 @@ class TemplateGenerator:
             if param.original_key == key:
                 return placeholder_name
         return None
+    
+    def _collect_form_factors(self, modules: List[Dict]) -> Dict:
+        """Collect form factor information from modules"""
+        from collections import Counter
+        
+        form_factors = []
+        hypervisors = []
+        
+        for module in modules:
+            ff = module.get('form_factor')
+            if ff:
+                form_factors.append(ff)
+            
+            hyp = module.get('hypervisor_support')
+            if hyp:
+                hypervisors.append(hyp)
+        
+        # Get unique form factors and their counts
+        ff_counter = Counter(form_factors)
+        supported_ffs = sorted(list(ff_counter.keys()))
+        
+        # Determine hypervisor support (if VA is present and hypervisor specified)
+        hypervisor = None
+        if hypervisors:
+            # If all specify same hypervisor, use it; otherwise None (all)
+            unique_hypervisors = set(hypervisors)
+            if len(unique_hypervisors) == 1:
+                hypervisor = hypervisors[0]
+        
+        return {
+            'supported': supported_ffs,
+            'distribution': dict(ff_counter),
+            'hypervisor': hypervisor
+        }
     
     def _detect_variations(self, modules: List[Dict]) -> List[str]:
         """Detect configuration variations across modules"""
