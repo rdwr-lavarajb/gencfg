@@ -25,7 +25,7 @@ class RelationshipManager:
         # Group references real servers
         ModuleRelationship(
             source_module="/c/slb/group",
-            source_param="group_id",  # "add" parameter
+            source_param="group_member",  # The "add {{group_member}}" parameter in group config
             target_module="/c/slb/real",
             target_param="index",
             relationship_type="references"
@@ -33,7 +33,7 @@ class RelationshipManager:
         # Virt references groups
         ModuleRelationship(
             source_module="/c/slb/virt",
-            source_param="service_group_id",  # "group" parameter
+            source_param="service_group_id",  # The "service_group_id" parameter in virt config
             target_module="/c/slb/group",
             target_param="index",
             relationship_type="references"
@@ -44,10 +44,36 @@ class RelationshipManager:
         """Initialize relationship manager."""
         self.relationships = self.RELATIONSHIPS
         
-    def resolve_references(
+    def suggest_missing_modules(
         self,
         modules: List[Any]  # AssembledModule objects
-    ) -> List[Any]:
+    ) -> List[str]:
+        """
+        Suggest missing modules based on relationships.
+        
+        For example, if /c/slb/virt is present but /c/slb/group is missing,
+        suggest adding /c/slb/group and /c/slb/real.
+        
+        Args:
+            modules: List of AssembledModule objects
+            
+        Returns:
+            List of module paths that should be added
+        """
+        present_modules = {m.module_path for m in modules}
+        suggestions = set()
+        
+        for module in modules:
+            module_path = module.module_path
+            
+            # Check if this module requires other modules
+            for rel in self.relationships:
+                if module_path == rel.source_module:
+                    # This module references another - check if target exists
+                    if rel.target_module not in present_modules:
+                        suggestions.add(rel.target_module)
+        
+        return sorted(list(suggestions))
         """
         Resolve inter-module references.
         

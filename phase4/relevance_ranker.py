@@ -57,9 +57,12 @@ class RelevanceRanker:
     # Irrelevant module patterns for common requirements
     # Maps requirement keywords to modules that should be excluded
     EXCLUSION_RULES = {
-        'vip': ['/c/port'],  # VIP requests don't need port configs
-        'virtual': ['/c/port'],
-        'load_balancing': ['/c/port'],
+        'vip': ['/c/port', '/c/vadc'],  # VIP requests don't need port configs or vADC management
+        'virtual': ['/c/port', '/c/vadc'],
+        'load_balancing': ['/c/port', '/c/vadc'],
+        'load balancer': ['/c/port', '/c/vadc'],
+        'real server': ['/c/vadc'],
+        'server group': ['/c/vadc'],
         'ssl': [],  # SSL can work with many modules
     }
     

@@ -81,9 +81,75 @@ def generate_config_from_requirement(
             'metadata': {'success': False}
         }
     
+    # Check for missing required modules based on relationships
+    relationship_mgr = RelationshipManager()
+    present_paths = {rt.template.module_path for rt in ranked_templates}
+    missing_modules = []
+    
+    if verbose:
+        print(f"   📋 Present modules: {', '.join(sorted(present_paths))}")
+    
+    for rt in ranked_templates:
+        module_path = rt.template.module_path
+        for rel in relationship_mgr.relationships:
+            if module_path == rel.source_module and rel.target_module not in present_paths:
+                if verbose:
+                    print(f"   ⚠️  {module_path} requires {rel.target_module} (missing)")
+                missing_modules.append(rel.target_module)
+    
+    # Retrieve missing required modules (iterate until no more missing)
+    max_iterations = 5
+    iteration = 0
+    while missing_modules and iteration < max_iterations:
+        iteration += 1
+        if verbose:
+            print(f"   🔍 Iteration {iteration}: Retrieving missing dependencies: {', '.join(set(missing_modules))}")
+        
+        newly_added = []
+        for missing_path in set(missing_modules):
+            # Query for the missing module
+            missing_results = vector_store.search_by_path(missing_path, top_k=1)
+            if missing_results['ids']:
+                # Convert to RetrievedTemplate
+                from phase4.template_retriever import RetrievedTemplate
+                missing_template = RetrievedTemplate(
+                    module_path=missing_results['metadatas'][0].get('module_path', ''),
+                    similarity_score=0.85,  # Assign high score since it's required
+                    template=missing_results['metadatas'][0].get('template', {}),
+                    parameters=missing_results['metadatas'][0].get('parameters', {}),
+                    defaults=missing_results['metadatas'][0].get('learned_defaults', {}),
+                    metadata=missing_results['metadatas'][0],
+                    document_text=missing_results['documents'][0]
+                )
+                # Add as a RankedTemplate
+                from phase4.relevance_ranker import RankedTemplate
+                ranked_templates.append(RankedTemplate(
+                    template=missing_template,
+                    relevance_score=0.85,
+                    score_breakdown={'dependency': 0.85},
+                    explanation=f"Required dependency",
+                    rank=len(ranked_templates) + 1
+                ))
+                newly_added.append(missing_path)
+                if verbose:
+                    print(f"   ✅ Added missing module: {missing_path}")
+            else:
+                if verbose:
+                    print(f"   ❌ Could not find template for: {missing_path}")
+        
+        # Check for new missing modules based on newly added modules
+        present_paths = {rt.template.module_path for rt in ranked_templates}
+        missing_modules = []
+        for new_path in newly_added:
+            for rel in relationship_mgr.relationships:
+                if new_path == rel.source_module and rel.target_module not in present_paths:
+                    if verbose:
+                        print(f"   ⚠️  {new_path} requires {rel.target_module} (missing)")
+                    missing_modules.append(rel.target_module)
+    
     if verbose:
         print(f"✅ Retrieved {len(ranked_templates)} templates")
-        for i, rt in enumerate(ranked_templates[:3], 1):
+        for i, rt in enumerate(ranked_templates[:5], 1):
             print(f"   {i}. {rt.template.module_path} (score: {rt.relevance_score:.2f})")
     
     # Step 2: Extract values from requirement
@@ -115,6 +181,7 @@ def generate_config_from_requirement(
         '/c/slb/virt': 1,
         '/c/slb/real': 1,
         '/c/slb/group': 1,
+        '/c/slb/ssl/sslpol': 1,
         '/c/port': 1,
         '/c/l2/vlan': 1,
         '/c/l3/if': 1,
@@ -178,13 +245,21 @@ def generate_config_from_requirement(
                 
                 if target_indices:
                     # Find and update the assignment
+                    found = False
                     for assignment in ma['assignments']:
                         if assignment.parameter_name == rel.source_param:
                             # Update value to reference target
+                            old_value = assignment.value
                             assignment.value = str(target_indices[0])
                             assignment.source = 'relationship'
                             assignment.confidence = 0.95
+                            found = True
+                            if verbose:
+                                print(f"   🔗 {module_path}.{rel.source_param}: {old_value} → {assignment.value} (references {rel.target_module})")
                             break
+                    
+                    if not found and verbose:
+                        print(f"   ⚠️  Could not find parameter {rel.source_param} in {module_path} assignments")
     
     # Now assemble all modules with corrected assignments
     if verbose:
@@ -237,6 +312,84 @@ def generate_config_from_requirement(
         )
         print(f"✅ Assembled {len(assembled_modules)} modules")
         print(f"   Total parameters: {total_params} ({user_params} user, {default_params} defaults, {relationship_params} relationships)")
+    
+    # Add service submodules for virt modules that have port and SSL
+    from phase5.template_assembler import AssembledModule
+    from phase5.parameter_matcher import ValueAssignment
+    service_modules = []
+    
+    for module in assembled_modules:
+        if module.module_path == '/c/slb/virt':
+            # Check if port and SSL are in the requirement
+            port = None
+            ssl_required = 'ssl' in requirement.lower()
+            group_id = None
+            
+            # Find port and group in assignments
+            for assignment in module.parameter_assignments:
+                if assignment.parameter_name == 'real_port':
+                    port = assignment.value
+                elif assignment.parameter_name == 'service_group_id':
+                    group_id = assignment.value
+            
+            if port and ssl_required:
+                # Get virt index from metadata
+                virt_index = module.metadata.get('index', 1)
+                
+                # Create service submodule
+                service_config_lines = [
+                    f"/c/slb/virt {virt_index}/service {port} ssl",
+                    f"\tgroup {group_id if group_id else 1}",
+                    f"\trport {port}"
+                ]
+                
+                service_assignments = [
+                    ValueAssignment(
+                        parameter_name='port',
+                        parameter_type='integer',
+                        value=str(port),
+                        source='user',
+                        confidence=0.95,
+                        original_param_key='port'
+                    ),
+                    ValueAssignment(
+                        parameter_name='protocol',
+                        parameter_type='string',
+                        value='ssl',
+                        source='user',
+                        confidence=0.95,
+                        original_param_key='protocol'
+                    ),
+                    ValueAssignment(
+                        parameter_name='group',
+                        parameter_type='integer',
+                        value=str(group_id if group_id else 1),
+                        source='relationship',
+                        confidence=0.95,
+                        original_param_key='group'
+                    )
+                ]
+                
+                service_module = AssembledModule(
+                    module_path=f'/c/slb/virt/service',
+                    config_lines=service_config_lines,
+                    parameter_assignments=service_assignments,
+                    missing_required=[],
+                    warnings=[],
+                    metadata={
+                        'category': 'service',
+                        'index': None,
+                        'parent_module': '/c/slb/virt',
+                        'parent_index': virt_index
+                    }
+                )
+                service_modules.append(service_module)
+                
+                if verbose:
+                    print(f"   ➕ Added service submodule: /c/slb/virt {virt_index}/service {port} ssl")
+    
+    # Add service modules to assembled modules
+    assembled_modules.extend(service_modules)
     
     # Order modules by dependencies
     resolver = DependencyResolver()

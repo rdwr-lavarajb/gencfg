@@ -158,6 +158,37 @@ class VectorStore:
             'documents': results['documents'][0] if results['documents'] else []
         }
     
+    def search_by_path(self, module_path: str, top_k: int = 1) -> Dict[str, Any]:
+        """
+        Search for templates by exact module path match.
+        
+        Args:
+            module_path: Module path to search for
+            top_k: Number of results (usually 1 for exact match)
+            
+        Returns:
+            Dict with ids, distances, metadatas, documents
+        """
+        results = self.collection.get(
+            where={"module_path": module_path},
+            limit=top_k
+        )
+        
+        # Deserialize metadata
+        if results['metadatas']:
+            results['metadatas'] = [
+                self._deserialize_metadata(m) for m in results['metadatas']
+            ]
+        else:
+            results['metadatas'] = []
+        
+        return {
+            'ids': results['ids'] if results['ids'] else [],
+            'distances': [],  # get() doesn't return distances
+            'metadatas': results['metadatas'] if results['metadatas'] else [],
+            'documents': results['documents'] if results['documents'] else []
+        }
+    
     def get_by_path(self, module_path: str) -> Optional[Dict[str, Any]]:
         """
         Get template by exact module path.

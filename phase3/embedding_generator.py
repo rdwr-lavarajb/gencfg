@@ -170,6 +170,10 @@ class EmbeddingGenerator:
             'examples_seen': template.get('examples_seen', 0),
             'tags': template.get('tags', []),
             'description': template.get('description', ''),
+            # Form factor support
+            'supported_form_factors': template.get('supported_form_factors', []),
+            'form_factor_distribution': template.get('form_factor_distribution', {}),
+            'hypervisor_support': template.get('hypervisor_support'),
             # Store full template and parameters for retrieval
             'template': template.get('template', {}),
             'parameters': template.get('parameters', {}),
@@ -219,6 +223,10 @@ class EmbeddingGenerator:
                 'examples_seen': template.get('examples_seen', 0),
                 'tags': template.get('tags', []),
                 'description': template.get('description', ''),
+                # Form factor support
+                'supported_form_factors': template.get('supported_form_factors', []),
+                'form_factor_distribution': template.get('form_factor_distribution', {}),
+                'hypervisor_support': template.get('hypervisor_support'),
                 'template': template.get('template', {}),
                 'parameters': template.get('parameters', {}),
                 'learned_defaults': template.get('learned_defaults', {}),
