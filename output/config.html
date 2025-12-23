@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generated Load Balancer Config</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            margin: -20px -20px 20px -20px;
+        }
+        .metadata {
+            background-color: #ecf0f1;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .warnings {
+            background-color: #fff3cd;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .module {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+        }
+        .module-header {
+            background-color: #34495e;
+            color: white;
+            padding: 8px;
+            margin: -15px -15px 15px -15px;
+            font-weight: bold;
+        }
+        .config-line {
+            margin: 3px 0;
+            padding: 3px;
+            background-color: #f8f9fa;
+        }
+        .parameter {
+            display: inline-block;
+            margin: 3px 5px;
+            padding: 2px 8px;
+            background-color: #e7f3ff;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Generated Load Balancer Config</h1>
+            <p>Generated: 2025-12-24T00:33:00.472962</p>
+        </div>
+        
+        <div class="metadata">
+            <h3>Configuration Metadata</h3>
+            <p><strong>Requirement:</strong> Create VIP 10.1.1.100 on port 443 with SSL offload</p>
+            <p><strong>Total Modules:</strong> 7</p>
+            <p><strong>Total Lines:</strong> 12</p>
+        </div>
+        <div class="warnings">
+            <h3>⚠️ Warnings</h3>
+            <ul>
+                <li>Missing required parameter: direct_server_return</li>
+                <li>Missing required parameter: virtual_server_statistics</li>
+                <li>Missing required parameter: subnet_mac_mode</li>
+                <li>/c/slb/adv: Missing required parameters: direct_server_return, virtual_server_statistics, subnet_mac_mode</li>
+                <li>Missing required parameter: ip_version</li>
+                <li>Missing required parameter: balancing_metric</li>
+                <li>/c/slb/group: Missing required parameters: ip_version, balancing_metric</li>
+                <li>Missing required parameter: hardware_offload_enabled</li>
+                <li>/c/slb/ssl/adv: Missing required parameters: hardware_offload_enabled</li>
+            </ul>
+        </div>
+        <h2>Configuration Modules</h2>
+        <div class="module">
+            <div class="module-header">
+                1. /c/slb/adv
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+                <span class="parameter">session_capacity=10</span>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/adv
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                2. /c/slb/group
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+                <span class="parameter">group_member=1</span>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/group 1
+add 1
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                3. /c/slb/real
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+                <span class="parameter">real_ip_address=10.1.1.100</span>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/real 1
+rip 10.1.1.100
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                4. /c/slb/ssl/adv
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/ssl/adv
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                5. /c/slb/ssl/sslpol
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/ssl/sslpol 1
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                6. /c/slb/virt
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+                <span class="parameter">virtual_ip_address=10.1.1.100</span>
+                <span class="parameter">service_group_id=1</span>
+                <span class="parameter">real_port=443</span>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/virt 1
+vip 10.1.1.100
+</pre>
+        </div>
+        <div class="module">
+            <div class="module-header">
+                7. /c/slb/virt/service
+            </div>
+            <div>
+                <strong>Parameters:</strong>
+                <span class="parameter">port=443</span>
+                <span class="parameter">protocol=ssl</span>
+                <span class="parameter">group=1</span>
+            </div>
+            <h4>Configuration:</h4>
+            <pre>/c/slb/virt 1/service 443 ssl
+	group 1
+	rport 443
+</pre>
+        </div>
+        <h2>Complete Configuration</h2>
+        <pre># Generated Configuration
+# Timestamp: 2025-12-24T00:33:00.472962
+# Requirement: Create VIP 10.1.1.100 on port 443 with SSL offload
+#
+
+/c/slb/adv
+
+/c/slb/group 1
+add 1
+
+/c/slb/real 1
+rip 10.1.1.100
+
+/c/slb/ssl/adv
+
+/c/slb/ssl/sslpol 1
+
+/c/slb/virt 1
+vip 10.1.1.100
+
+/c/slb/virt 1/service 443 ssl
+	group 1
+	rport 443
+
+apply
+save
+</pre>
+    </div>
+</body>
+</html>

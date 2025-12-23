@@ -414,7 +414,7 @@ def generate_config_from_requirement(
     
     # Step 6: Generate final configuration
     if verbose:
-        print("\nStep 6/6: Generating configuration...")
+        print("\nStep 6/7: Generating configuration...")
     
     generator = ConfigGenerator()
     config = generator.generate(
@@ -429,18 +429,49 @@ def generate_config_from_requirement(
     
     if verbose:
         print(f"✅ Generated configuration with {config.metadata['total_lines']} lines")
+    
+    # Step 7: Validate configuration
+    if verbose:
+        print("\nStep 7/7: Validating configuration...")
+    
+    from phase6.config_validator import ConfigValidator
+    validator = ConfigValidator()
+    validation_result = validator.validate(
+        config,
+        check_syntax=True,
+        check_types=True,
+        check_references=True,
+        check_dependencies=True
+    )
+    
+    if verbose:
+        if validation_result.is_valid:
+            print(f"✅ Configuration is valid")
+        else:
+            print(f"⚠️  Validation found {len(validation_result.errors)} error(s)")
+        
+        # Show validation summary
+        print(f"\n{validation_result.summary}")
+    
+    # Add validation errors to warnings
+    warnings.extend([e.message for e in validation_result.errors])
+    warnings.extend([w.message for w in validation_result.warnings])
+    
+    if verbose:
         generator.print_summary(config)
     
     return {
         'config': config,
         'warnings': warnings,
+        'validation': validation_result,
         'metadata': {
             'success': True,
             'requirement': requirement,
             'templates_retrieved': len(ranked_templates),
             'values_extracted': len(all_values),
             'modules_generated': len(ordered_modules),
-            'total_lines': config.metadata['total_lines']
+            'total_lines': config.metadata['total_lines'],
+            'is_valid': validation_result.is_valid
         }
     }
 
@@ -638,6 +669,26 @@ def main():
         '-v',
         action='store_true',
         help='Verbose output'
+    )
+    
+    parser.add_argument(
+        '--format',
+        choices=['cli', 'json', 'yaml', 'html'],
+        default='cli',
+        help='Output format (cli, json, yaml, html)'
+    )
+    
+    parser.add_argument(
+        '--validate',
+        action='store_true',
+        default=True,
+        help='Enable validation (default: True)'
+    )
+    
+    parser.add_argument(
+        '--no-validate',
+        action='store_true',
+        help='Disable validation'
     )
     
     args = parser.parse_args()

@@ -1,0 +1,86 @@
+metadata:
+  timestamp: '2025-12-24T00:33:00.472962'
+  requirement: Create VIP 10.1.1.100 on port 443 with SSL offload
+  total_modules: 7
+  total_lines: 12
+warnings:
+- 'Missing required parameter: direct_server_return'
+- 'Missing required parameter: virtual_server_statistics'
+- 'Missing required parameter: subnet_mac_mode'
+- '/c/slb/adv: Missing required parameters: direct_server_return, virtual_server_statistics,
+  subnet_mac_mode'
+- 'Missing required parameter: ip_version'
+- 'Missing required parameter: balancing_metric'
+- '/c/slb/group: Missing required parameters: ip_version, balancing_metric'
+- 'Missing required parameter: hardware_offload_enabled'
+- '/c/slb/ssl/adv: Missing required parameters: hardware_offload_enabled'
+modules:
+- path: /c/slb/adv
+  lines:
+  - /c/slb/adv
+  parameters:
+    session_capacity:
+      value: '10'
+      source: user
+      confidence: 0.5399999999999999
+- path: /c/slb/group
+  lines:
+  - /c/slb/group 1
+  - add 1
+  parameters:
+    group_member:
+      value: '1'
+      source: relationship
+      confidence: 0.95
+- path: /c/slb/real
+  lines:
+  - /c/slb/real 1
+  - rip 10.1.1.100
+  parameters:
+    real_ip_address:
+      value: 10.1.1.100
+      source: user
+      confidence: 0.58
+- path: /c/slb/ssl/adv
+  lines:
+  - /c/slb/ssl/adv
+  parameters: {}
+- path: /c/slb/ssl/sslpol
+  lines:
+  - /c/slb/ssl/sslpol 1
+  parameters: {}
+- path: /c/slb/virt
+  lines:
+  - /c/slb/virt 1
+  - vip 10.1.1.100
+  parameters:
+    virtual_ip_address:
+      value: 10.1.1.100
+      source: user
+      confidence: 0.58
+    service_group_id:
+      value: '1'
+      source: relationship
+      confidence: 0.95
+    real_port:
+      value: '443'
+      source: user
+      confidence: 0.68
+- path: /c/slb/virt/service
+  lines:
+  - /c/slb/virt 1/service 443 ssl
+  - "\tgroup 1"
+  - "\trport 443"
+  parameters:
+    port:
+      value: '443'
+      source: user
+      confidence: 0.95
+    protocol:
+      value: ssl
+      source: user
+      confidence: 0.95
+    group:
+      value: '1'
+      source: relationship
+      confidence: 0.95
