@@ -2,6 +2,23 @@
 
 AI-powered network configuration generator for Alteon/Radware load balancers using RAG (Retrieval Augmented Generation).
 
+## Quick Start
+
+### Prerequisites
+```bash
+# 1. Activate virtual environment
+.venv\Scripts\Activate.ps1
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Setup OpenAI API key (for Phase 2)
+python setup_env.py
+# Then edit .env and add your key
+```
+
+See [Environment Setup Guide](docs/ENV_SETUP.md) for detailed instructions.
+
 ## Project Status: Phase 1 Complete ✓
 
 ### Phase 1: Ingest & Parse  
