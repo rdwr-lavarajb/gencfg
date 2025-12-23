@@ -1,0 +1,13 @@
+# Test requirements for Phase 4 retrieval system
+# One requirement per line
+
+Configure management IP address and network settings
+Setup NTP time synchronization with primary and secondary servers
+Create virtual server for load balancing on port 80
+Configure real servers with IP addresses 10.1.1.10, 10.1.1.11, 10.1.1.12
+Setup SSL certificates for HTTPS
+Configure VLAN 100 with learning enabled
+Create user account with admin privileges
+Configure Layer 3 interface with IP 192.168.1.1/24
+Setup server group for load balancing pool
+Enable SNMP monitoring and access control
