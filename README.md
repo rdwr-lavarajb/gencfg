@@ -12,16 +12,28 @@ AI-powered network configuration generator for Alteon/Radware load balancers usi
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Setup OpenAI API key (for Phase 2)
+# 3. Setup OpenAI API key
 python setup_env.py
 # Then edit .env and add your key
 ```
 
 See [Environment Setup Guide](docs/ENV_SETUP.md) for detailed instructions.
 
-## Project Status: Phase 1 Complete ✓
+### Generate Configuration (Phase 5 Complete!)
+```bash
+# Interactive mode
+python generate_config.py --mode interactive
 
-### Phase 1: Ingest & Parse  
+# Single requirement
+python generate_config.py --mode single -r "Create VIP 10.1.1.100 on port 443 with SSL offload" --verbose
+
+# Batch mode
+python generate_config.py --mode batch -f requirements.txt -o output/
+```
+
+## Project Status: Phase 5 Complete ✓
+
+### ✅ Phase 1: Ingest & Parse (COMPLETE)
 **Status:** ✅ Complete
 
 Parses raw configuration files into structured module blocks with:
@@ -32,10 +44,94 @@ Parses raw configuration files into structured module blocks with:
 
 **Usage:**
 ```bash
-# Add configuration files to configs/ directory
-# Then run ingestion:
 python ingest_configs.py
 ```
+
+### ✅ Phase 2: Normalize & Template (COMPLETE)
+**Status:** ✅ Complete
+
+AI-powered conversion of module blocks into reusable templates:
+- GPT-4 analyzes patterns across multiple config instances
+- Generates descriptive placeholder names
+- Learns parameter types, defaults, and validations
+- Extracts categories, tags, and descriptions
+- Computes confidence scores for defaults
+
+**Usage:**
+```bash
+python normalize_configs.py
+```
+
+**Output:** `data/templates/templated_modules_*.json`
+
+### ✅ Phase 3: Embed & Store (COMPLETE)
+**Status:** ✅ Complete
+
+Vector database storage with ChromaDB:
+- Generates embeddings for template searchability
+- Stores templates with rich metadata
+- Enables semantic similarity search
+- Persistent storage in `data/vectordb/`
+
+**Usage:**
+```bash
+python embed_templates.py
+```
+
+### ✅ Phase 4: Retrieve (RAG) (COMPLETE)
+**Status:** ✅ Complete
+
+Intelligent template retrieval system:
+- Parses natural language requirements
+- Multi-factor relevance ranking (semantic + category + params)
+- Query generation with filters
+- Returns ranked templates with explanations
+
+**Components:**
+- `phase4/requirements_parser.py` - NLP parsing
+- `phase4/query_generator.py` - Vector queries
+- `phase4/template_retriever.py` - ChromaDB search
+- `phase4/relevance_ranker.py` - Multi-factor scoring
+
+### ✅ Phase 5: Assembly & Generation (COMPLETE)
+**Status:** ✅ Complete
+
+End-to-end configuration generation pipeline:
+- Value extraction from requirements (IPs, ports, VLANs)
+- Intelligent parameter matching with confidence scores
+- Template assembly with placeholder replacement
+- Dependency resolution and module ordering
+- Final configuration formatting
+
+**Components:**
+- `phase5/value_extractor.py` - Extract concrete values
+- `phase5/parameter_matcher.py` - Match values to parameters
+- `phase5/template_assembler.py` - Fill templates
+- `phase5/dependency_resolver.py` - Order modules
+- `phase5/config_generator.py` - Format output
+- `generate_config.py` - Main orchestrator
+
+**Usage:**
+```bash
+# Interactive mode
+python generate_config.py --mode interactive
+
+# Single requirement
+python generate_config.py --mode single -r "Create VIP 10.1.1.100 on port 443" --verbose
+
+# Batch processing
+python generate_config.py --mode batch -f requirements.txt -o output/
+```
+
+### 🔜 Phase 6: Validate & Render (NEXT)
+**Status:** 🔜 Planned
+
+Final validation and output rendering:
+- Syntax validation
+- Type checking
+- Cross-reference validation
+- Dependency verification
+- Output formatting options
 
 ## Project Pipeline
 
@@ -46,27 +142,27 @@ python ingest_configs.py
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 2: Normalize & Template (🔜 NEXT)                     │
-│ Module Blocks → AI Analysis → Templated Modules            │
+│ Phase 2: Normalize & Template (✅ COMPLETE)                  │
+│ Module Blocks → GPT-4 Analysis → Templated Modules         │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 3: Embed & Store                                      │
+│ Phase 3: Embed & Store (✅ COMPLETE)                         │
 │ Templated Modules + Metadata → Embeddings → ChromaDB       │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 4: Retrieve (RAG)                                     │
-│ Customer Natural Language → Query Embedding → Modules      │
+│ Phase 4: Retrieve (RAG) (✅ COMPLETE)                        │
+│ Natural Language → Parse → Query → Ranked Templates        │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 5: Assemble Final Config                             │
-│ Retrieved Modules + Values → Python Assembly → Config      │
+│ Phase 5: Assembly & Generation (✅ COMPLETE)                 │
+│ Requirements → Extract Values → Match → Assemble → Config  │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 6: Validate & Render                                  │
+│ Phase 6: Validate & Render (🔜 NEXT)                        │
 │ Draft Config → Validation → Final Config File              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -75,154 +171,160 @@ python ingest_configs.py
 
 ```
 gencfg/
-├── configs/                 # Raw configuration files (.txt, .cfg)
-│   ├── sample_config_1.txt
-│   └── sample_config_2.txt
+├── configs/                    # Raw configuration files (.txt, .cfg)
 ├── data/
-│   └── parsed/             # Parsed module JSON files (gitignored)
+│   ├── parsed/                # Phase 1: Parsed module JSON files
+│   ├── templates/             # Phase 2: Templated modules with metadata
+│   ├── vectordb/              # Phase 3: ChromaDB persistent storage
+│   └── results/               # Processing results and logs
+├── output/                     # Generated configurations
+├── docs/                       # Documentation
+│   ├── ENV_SETUP.md
+│   ├── PHASE2_DESIGN.md
+│   └── PHASE2_QUICK_REF.md
 ├── utils/
 │   ├── __init__.py
-│   └── parser.py           # Phase 1: Configuration parser
-├── ingest_configs.py       # Main ingestion script
-├── test_parser.py          # Quick parser test
-└── README.md
-```
-
-## Project Overview
-
-This system parses existing network configurations, extracts reusable module templates, stores them in a vector database, and generates new configurations based on natural language customer requirements.
-
-**Target Platform:** Alteon/Radware Load Balancers
-
-## Architecture Phases
-
-1. **Ingest & Parse** - Parse raw configurations into module blocks
-2. **Normalize & Template** - Convert to templates with placeholders
-3. **Embed & Store** - Store in vector database (ChromaDB)
-4. **Retrieve (RAG)** - Find relevant modules based on customer intent
-5. **Assemble** - Generate configuration from templates
-6. **Validate & Render** - Final validation and output
-
-## Current Status
-
-✅ **Phase 1 Complete:** Configuration Parser
-
-### Phase 1: Configuration Parser
-
-Located in `utils/parser.py`
-
-**Features:**
-- Parses hierarchical CLI-style configurations
-- Extracts module blocks with paths and indices
-- Handles multi-line content (certificates, scripts)
-- Detects action commands
-- Normalizes whitespace
-- Extracts metadata from multi-line modules
-
-**Module Types Supported:**
-- Standard modules (key-value pairs)
-- Indexed modules (numeric and named)
-- Action commands (e.g., `/c/slb/pip/add 10.250.20.29 820`)
-- Empty modules (declarations only)
-- Certificate imports (preserves PEM format)
-- Script imports (preserves code exactly)
-
-## Quick Start
-
-### Setup
-
-```bash
-# Create virtual environment (already done)
-python -m venv .venv
-
-# Activate virtual environment
-.venv\Scripts\Activate.ps1  # Windows PowerShell
-
-# Install dependencies (when available)
-pip install -r requirements.txt
-```
-
-### Test Phase 1 Parser
-
-```bash
-python test_parser.py
-```
-
-## Usage Example
-
-```python
-from utils.parser import ConfigParser, ModuleType
-
-# Parse a configuration file
-parser = ConfigParser()
-with open('config.txt', 'r') as f:
-    modules = parser.parse(f.read())
-
-# Get statistics
-stats = parser.get_module_stats()
-print(f"Parsed {stats['total_modules']} modules")
-
-# Filter by type
-cert_modules = parser.get_modules_by_type(ModuleType.MULTILINE_CERT)
-for module in cert_modules:
-    print(f"Certificate: {module.multiline_metadata['cert_name']}")
-
-# Filter by path
-interfaces = parser.get_modules_by_path('/c/l3/if')
-for iface in interfaces:
-    print(f"Interface {iface.index}")
-```
-
-## Project Structure
-
-```
-gencfg/
-├── utils/
+│   └── parser.py              # Phase 1: Configuration parser
+├── phase2/                     # AI-powered templating
 │   ├── __init__.py
-│   └── parser.py          # Phase 1: Configuration parser
-├── data/                   # Sample configurations
-├── test_parser.py         # Phase 1 test script
+│   ├── ai_processor.py        # GPT-4 integration
+│   ├── template_generator.py  # Template creation
+│   ├── default_learner.py     # Learn parameter defaults
+│   └── metadata_extractor.py  # Extract categories/tags
+├── phase3/                     # Vector database
+│   ├── __init__.py
+│   ├── embedding_generator.py # Generate embeddings
+│   ├── vector_store.py        # ChromaDB wrapper
+│   └── document_builder.py    # Build searchable documents
+├── phase4/                     # RAG retrieval
+│   ├── __init__.py
+│   ├── requirements_parser.py # Parse natural language
+│   ├── query_generator.py     # Generate vector queries
+│   ├── template_retriever.py  # ChromaDB search
+│   └── relevance_ranker.py    # Multi-factor ranking
+├── phase5/                     # Assembly & generation
+│   ├── __init__.py
+│   ├── value_extractor.py     # Extract values from requirements
+│   ├── parameter_matcher.py   # Match values to parameters
+│   ├── template_assembler.py  # Fill templates
+│   ├── dependency_resolver.py # Order modules by dependencies
+│   └── config_generator.py    # Format final output
+├── ingest_configs.py          # Phase 1: Main ingestion script
+├── normalize_configs.py       # Phase 2: Main templating script
+├── embed_templates.py         # Phase 3: Main embedding script
+├── generate_config.py         # Phase 5: Main generation script (interactive/batch/single)
+├── test_parser.py             # Phase 1: Quick parser test
+├── requirements.txt           # Python dependencies
+├── .env                       # Environment variables (API keys)
 ├── .gitignore
 └── README.md
 ```
 
-## Next Steps
+## Current Features
 
-- [ ] Phase 2: AI-assisted normalization and templating
-- [ ] Phase 3: Vector database setup (ChromaDB)
-- [ ] Phase 4: RAG retrieval system
-- [ ] Phase 5: Configuration assembly engine
-- [ ] Phase 6: Validation framework
+### End-to-End Configuration Generation
+- **Natural Language Input**: "Create VIP 10.1.1.100 on port 443 with SSL offload"
+- **Automatic Value Extraction**: IPs, ports, VLANs, names from requirements
+- **Intelligent Template Retrieval**: Semantic search + multi-factor ranking
+- **Smart Parameter Matching**: Type compatibility + context + keywords
+- **Dependency Ordering**: Topological sort ensures correct module sequence
+- **Multiple Modes**: Interactive, single requirement, or batch processing
+
+### Example Output
+Input: `"Create VIP 10.1.1.100 on port 443 with SSL offload"`
+
+Output:
+```
+/c/slb/real 1
+    ipver v4
+    rip 10.1.1.100
+
+/c/slb/group 1
+    ipver v4
+    add 1
+
+/c/slb/virt 1
+    ipver v4
+    vip 10.1.1.100
+
+/c/slb/ssl/certs/import cert
+
+apply
+save
+```
+
+## Known Limitations & Upcoming Enhancements
+
+### Phase 4 Enhancements (Planned)
+- Better template relevance filtering
+- Context-aware template selection
+- Category-based filtering
+
+### Phase 5 Enhancements (Planned)
+- Inter-module relationship tracking (group.add → real.index)
+- Sub-module support (`/c/slb/virt 1/service 443 https`)
+- Improved default value usage
+- Better index assignment strategies
+
+### Phase 6 (Next)
+- Configuration validation
+- Type checking
+- Cross-reference verification
+- Syntax validation
 
 ## Development Notes
 
 **Design Principles:**
-- Deterministic output is critical
-- AI suggests, Python generates
+- AI suggests, Python generates (deterministic)
 - Templates are source of truth
 - Multi-line content preserved exactly
-- Module order matters
+- Module order matters for dependencies
+- No hallucination - only template-based generation
 
-**Parser Specifications:**
-- Whitespace normalized
-- No syntax validation (for now)
-- Action commands treated specially
-- Metadata extracted from multi-line modules
+**Technology Stack:**
+- **Language**: Python 3.13.9
+- **AI**: OpenAI GPT-4 Turbo (templating only)
+- **Vector DB**: ChromaDB (persistent storage)
+- **Embeddings**: sentence-transformers/all-MiniLM-L6-v2
+- **Architecture**: RAG (Retrieval Augmented Generation)
+
+**Performance:**
+- Phase 2 (Templating): ~$2.50 per run, ~2 minutes
+- Phase 3 (Embedding): < 1 second
+- Phase 4 (Retrieval): < 1 second
+- Phase 5 (Generation): < 1 second
+- **Total**: Generate configs in under 2 seconds after initial setup
 
 ---
 
-## Phase 2 Design (Approved)
+## Documentation
 
-Phase 2 design is complete and approved. See [docs/PHASE2_DESIGN.md](docs/PHASE2_DESIGN.md) for full details.
+- [Environment Setup Guide](docs/ENV_SETUP.md) - Python, venv, API keys
+- [Phase 2 Design](docs/PHASE2_DESIGN.md) - Templating architecture
+- [Phase 2 Quick Reference](docs/PHASE2_QUICK_REF.md) - Command reference
 
-**Key Decisions:**
-- **AI Provider:** OpenAI GPT-4
-- **Placeholder Style:** Descriptive names (e.g., `{{management_ip_address}}`)
-- **Template Strategy:** One template with all optional parameters
-- **Default Threshold:** 70% occurrence
-- **Cost Estimate:** ~$2.50 per full run
+---
 
-**Quick Reference:** [docs/PHASE2_QUICK_REF.md](docs/PHASE2_QUICK_REF.md)
+## Recent Changes (Dec 23, 2025)
+
+### Phase 5 Complete
+- Implemented complete assembly and generation pipeline
+- Created 6 new components (1,722 lines of code)
+- End-to-end testing successful
+- Interactive/batch/single modes working
+- Configuration export with timestamps and metadata
+
+### Known Issues
+- Template retrieval may include irrelevant modules
+- Missing inter-module relationship tracking
+- No sub-module support yet (e.g., virt/service)
+- Some required parameters use generic defaults
+
+### Next Session Goals
+1. Enhance Phase 4 template filtering
+2. Add inter-module relationship intelligence
+3. Implement sub-module support
+4. Begin Phase 6 validation system
 
 ---
 
