@@ -13,5 +13,6 @@ __pycache__/
 dist/
 build/
 data/parsed/
+data/vectordb/
 *.json
 .env
