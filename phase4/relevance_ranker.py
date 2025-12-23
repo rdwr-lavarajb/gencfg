@@ -54,10 +54,20 @@ class RelevanceRanker:
         'monitoring': ['system_management'],
     }
     
+    # Irrelevant module patterns for common requirements
+    # Maps requirement keywords to modules that should be excluded
+    EXCLUSION_RULES = {
+        'vip': ['/c/port'],  # VIP requests don't need port configs
+        'virtual': ['/c/port'],
+        'load_balancing': ['/c/port'],
+        'ssl': [],  # SSL can work with many modules
+    }
+    
     def rank(
         self,
         templates: List[RetrievedTemplate],
-        parsed: ParsedRequirement
+        parsed: ParsedRequirement,
+        apply_filtering: bool = True
     ) -> List[RankedTemplate]:
         """
         Rank templates by relevance.
@@ -65,10 +75,18 @@ class RelevanceRanker:
         Args:
             templates: List of retrieved templates
             parsed: ParsedRequirement for context
+            apply_filtering: Whether to filter out irrelevant templates
             
         Returns:
             List of RankedTemplate objects, sorted by relevance_score
         """
+        if not templates:
+            return []
+        
+        # Apply filtering to remove irrelevant templates
+        if apply_filtering:
+            templates = self._filter_irrelevant(templates, parsed)
+        
         if not templates:
             return []
         
@@ -95,6 +113,45 @@ class RelevanceRanker:
             rt.rank = i
         
         return ranked
+    
+    def _filter_irrelevant(
+        self,
+        templates: List[RetrievedTemplate],
+        parsed: ParsedRequirement
+    ) -> List[RetrievedTemplate]:
+        """
+        Filter out templates that are clearly irrelevant.
+        
+        Args:
+            templates: List of templates
+            parsed: Parsed requirement
+            
+        Returns:
+            Filtered list of templates
+        """
+        filtered = []
+        
+        # Extract keywords from requirement
+        req_text_lower = parsed.original_text.lower()
+        
+        for template in templates:
+            module_path = template.module_path
+            should_exclude = False
+            
+            # Check exclusion rules
+            for keyword, excluded_modules in self.EXCLUSION_RULES.items():
+                if keyword in req_text_lower:
+                    for excluded in excluded_modules:
+                        if module_path.startswith(excluded):
+                            should_exclude = True
+                            break
+                if should_exclude:
+                    break
+            
+            if not should_exclude:
+                filtered.append(template)
+        
+        return filtered
     
     def _compute_scores(
         self,

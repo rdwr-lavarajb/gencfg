@@ -24,6 +24,7 @@ from phase5.value_extractor import ValueExtractor
 from phase5.parameter_matcher import ParameterMatcher
 from phase5.template_assembler import TemplateAssembler
 from phase5.dependency_resolver import DependencyResolver
+from phase5.relationship_manager import RelationshipManager
 from phase5.config_generator import ConfigGenerator
 
 
@@ -119,6 +120,9 @@ def generate_config_from_requirement(
         '/c/l3/if': 1,
     }
     
+    # First pass: Create assignment lists without assembling yet
+    module_assignments = []
+    
     for ranked_template in ranked_templates:
         # Get parameters and defaults from the retrieved template
         retrieved = ranked_template.template  # This is a RetrievedTemplate
@@ -126,8 +130,70 @@ def generate_config_from_requirement(
         assignments = matcher.match(
             retrieved.parameters,
             extracted_values_dict,
-            defaults=retrieved.defaults
+            defaults=retrieved.defaults,
+            auto_fill_high_confidence=True
         )
+        
+        #Determine index for this module
+        module_path = retrieved.module_path
+        index = None
+        
+        # Check if this module type needs an index
+        if module_path in index_counter:
+            index = index_counter[module_path]
+            index_counter[module_path] += 1
+        
+        # Store for later assembly
+        module_assignments.append({
+            'retrieved': retrieved,
+            'assignments': assignments,
+            'index': index
+        })
+    
+    # Resolve inter-module relationships at the assignment level
+    if verbose:
+        print("\nStep 4/5: Resolving relationships...")
+    
+    relationship_mgr = RelationshipManager()
+    
+    # Build a map of module indices
+    module_index_map = {}
+    for ma in module_assignments:
+        path = ma['retrieved'].module_path
+        idx = ma['index']
+        if path not in module_index_map:
+            module_index_map[path] = []
+        if idx is not None:
+            module_index_map[path].append(idx)
+    
+    # Fix relationships in assignments
+    for ma in module_assignments:
+        module_path = ma['retrieved'].module_path
+        
+        # Check if this module has relationships
+        for rel in relationship_mgr.relationships:
+            if module_path == rel.source_module:
+                # This module references another module
+                target_indices = module_index_map.get(rel.target_module, [])
+                
+                if target_indices:
+                    # Find and update the assignment
+                    for assignment in ma['assignments']:
+                        if assignment.parameter_name == rel.source_param:
+                            # Update value to reference target
+                            assignment.value = str(target_indices[0])
+                            assignment.source = 'relationship'
+                            assignment.confidence = 0.95
+                            break
+    
+    # Now assemble all modules with corrected assignments
+    if verbose:
+        print("\nStep 5/5: Assembling and ordering modules...")
+    
+    for ma in module_assignments:
+        retrieved = ma['retrieved']
+        assignments = ma['assignments']
+        index = ma['index']
         
         # Assemble template with matched values
         # TemplateAssembler expects a dict with module_path, template, parameters
@@ -137,15 +203,6 @@ def generate_config_from_requirement(
             'parameters': retrieved.parameters,
             'metadata': retrieved.metadata
         }
-        
-        # Determine index for this module
-        module_path = retrieved.module_path
-        index = None
-        
-        # Check if this module type needs an index
-        if module_path in index_counter:
-            index = index_counter[module_path]
-            index_counter[module_path] += 1
         
         assembler = TemplateAssembler()
         assembled = assembler.assemble(
@@ -164,10 +221,24 @@ def generate_config_from_requirement(
         )
         print(f"   Total parameters: {total_params} ({user_params} from user, {total_params - user_params} defaults)")
     
-    # Step 4: Resolve dependencies and order modules
     if verbose:
-        print("\nStep 4/5: Resolving dependencies...")
+        total_params = sum(len(m.parameter_assignments) for m in assembled_modules)
+        user_params = sum(
+            sum(1 for a in m.parameter_assignments if a.source == 'user')
+            for m in assembled_modules
+        )
+        default_params = sum(
+            sum(1 for a in m.parameter_assignments if a.source == 'default')
+            for m in assembled_modules
+        )
+        relationship_params = sum(
+            sum(1 for a in m.parameter_assignments if a.source == 'relationship')
+            for m in assembled_modules
+        )
+        print(f"✅ Assembled {len(assembled_modules)} modules")
+        print(f"   Total parameters: {total_params} ({user_params} user, {default_params} defaults, {relationship_params} relationships)")
     
+    # Order modules by dependencies
     resolver = DependencyResolver()
     ordered_modules = resolver.order_modules(assembled_modules)
     
@@ -188,9 +259,9 @@ def generate_config_from_requirement(
     if verbose:
         print(f"✅ Ordered {len(ordered_modules)} modules")
     
-    # Step 5: Generate final configuration
+    # Step 6: Generate final configuration
     if verbose:
-        print("\nStep 5/5: Generating configuration...")
+        print("\nStep 6/6: Generating configuration...")
     
     generator = ConfigGenerator()
     config = generator.generate(

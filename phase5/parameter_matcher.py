@@ -38,7 +38,8 @@ class ParameterMatcher:
         template_parameters: Dict[str, Any],
         extracted_values: Dict[str, List[Any]],
         defaults: Dict[str, Any] = None,
-        use_defaults: bool = True
+        use_defaults: bool = True,
+        auto_fill_high_confidence: bool = True
     ) -> List[ValueAssignment]:
         """
         Match extracted values to template parameters.
@@ -48,6 +49,7 @@ class ParameterMatcher:
             extracted_values: Values extracted from requirements
             defaults: Learned defaults from template
             use_defaults: Whether to use defaults for missing values
+            auto_fill_high_confidence: Auto-fill parameters with >90% confidence defaults
             
         Returns:
             List of ValueAssignment objects
@@ -62,6 +64,25 @@ class ParameterMatcher:
         for param_name, param_info in template_parameters.items():
             param_type = param_info.get('type', 'string')
             
+            # Check if this parameter has a very high confidence default
+            # that should be auto-filled even if user didn't specify
+            if auto_fill_high_confidence and param_name in defaults:
+                default_info = defaults[param_name]
+                confidence = default_info.get('confidence', 0.0)
+                
+                # Auto-fill parameters with very high confidence (>90%)
+                # Common examples: ip_version=v4, enabled_status=ena
+                if confidence >= 0.9:
+                    assignments.append(ValueAssignment(
+                        parameter_name=param_name,
+                        parameter_type=param_type,
+                        value=default_info.get('default'),
+                        source='default',
+                        confidence=confidence,
+                        original_param_key=param_info.get('original_key', param_name)
+                    ))
+                    continue
+            
             # Try to match with extracted values
             assignment = self._match_parameter(
                 param_name,
@@ -74,12 +95,12 @@ class ParameterMatcher:
                 assignments.append(assignment)
                 continue
             
-            # No user value found - try defaults
+            # No user value found - try defaults with lower confidence
             if use_defaults and param_name in defaults:
                 default_info = defaults[param_name]
                 confidence = default_info.get('confidence', 0.5)
                 
-                # Only use defaults with reasonable confidence
+                # Use defaults with reasonable confidence for optional params
                 if confidence >= 0.7 or not param_info.get('required', False):
                     assignments.append(ValueAssignment(
                         parameter_name=param_name,
