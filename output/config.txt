@@ -1,0 +1,23 @@
+# Generated Configuration
+# Timestamp: 2025-12-23T17:31:09.930620
+# Requirement: Create VIP 10.1.1.100 on port 443 with SSL offload
+#
+
+
+/c/port {{index}}
+pvid 10
+
+/c/slb/group {{index}}
+add 10
+
+/c/slb/real {{index}}
+rip 10.1.1.100
+
+/c/slb/ssl/certs/import {{index}}
+
+/c/slb/virt {{index}}
+vip 10.1.1.100
+
+
+apply
+save
