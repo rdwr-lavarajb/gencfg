@@ -16,3 +16,6 @@ data/parsed/
 data/vectordb/
 *.json
 .env
+
+# Configuration files - keep local only
+configs/
