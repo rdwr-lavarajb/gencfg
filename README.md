@@ -1,6 +1,6 @@
 # Configuration Generator Project
 
-AI-powered network configuration generator for Alteon/Radware load balancers using RAG (Retrieval Augmented Generation).
+AI-powered network configuration generator for load balancers using RAG (Retrieval Augmented Generation).
 
 ## Quick Start
 
