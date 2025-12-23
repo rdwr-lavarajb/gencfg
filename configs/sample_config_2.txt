@@ -1,0 +1,33 @@
+/c/sys/mmgmt
+	dhcp disabled
+	addr 10.250.4.26
+	mask 255.255.255.0
+	broad 10.250.4.255
+	gw 10.250.4.1
+	ena
+	dns mgmt
+	ntp mgmt
+	snmp mgmt
+/c/sys/ntp
+	prisrv 10.204.22.58
+	secsrv 10.204.22.60
+/c/port 1 
+	pvid 818
+/c/l3/if 1
+	ena
+	ipver v4
+	addr 10.250.18.26
+	mask 255.255.255.0
+	broad 10.250.18.255
+	vlan 818
+	peer 10.250.18.27
+/c/slb/real 10
+	ena
+	ipver v4
+	rip 10.204.12.229
+	name "Srs1383_tcp"
+/c/slb/real 11
+	ena
+	ipver v4
+	rip 10.250.2.34
+	name "Srs795-WebLogic-PROD"

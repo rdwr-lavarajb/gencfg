@@ -1,2 +1,16 @@
 GPTPrompts.txt
 project prompts.txt
+Layout.txt
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+data/parsed/
+*.json
