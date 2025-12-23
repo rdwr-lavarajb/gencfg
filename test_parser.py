@@ -46,57 +46,6 @@ HTTP::respond $static::STATUS_CODE content $static::CONTENT
 	ipver v4
 	add 3
 	name "OMS-Monitor (1159)"
-""""""
-
-
-def main():
-    """Quick parser test"""
-    print("Testing parser...")
-    parser = ConfigParser()
-    modules = parser.parse(TEST_CONFIG)
-    
-    print(f"✓ Parsed {len(modules)} modules:")
-    for m in modules:
-        print(f"  - {m.module_path} {m.index or ''} ({m.module_type.value})")
-    
-    print("\n✓ Parser working correctly!")
-    print("📌 For full ingestion, run: python ingest_configs.py")
-
-
-if __name__ == "__main__":
-    main()
-
-    print("\n3. INDEXED MODULE (Named):")
-    named_module = [m for m in modules if m.index == 'Vision-Analytics'][0]
-    print(f"   Path: {named_module.module_path}")
-    print(f"   Index: {named_module.index}")
-    print(f"   Type: {named_module.module_type.value}")
-    print(f"   Sub-lines: {named_module.sub_lines}")
-    
-    # Example 4: Action command
-    print("\n4. ACTION COMMAND:")
-    action_modules = [m for m in modules if m.module_type == ModuleType.ACTION]
-    if action_modules:
-        action = action_modules[0]
-        print(f"   Path: {action.module_path}")
-        print(f"   Type: {action.module_type.value}")
-        print(f"   Parameters: {action.action_params}")
-    
-    # Example 5: Empty module
-    print("\n5. EMPTY MODULE:")
-    empty_modules = [m for m in modules if m.module_type == ModuleType.EMPTY]
-    if empty_modules:
-        empty = empty_modules[0]
-        print(f"   Path: {empty.module_path}")
-        print(f"   Index: {empty.index}")
-        print(f"   Type: {empty.module_type.value}")
-    
-    # Example 6: Certificate module
-    print("\n6. CERTIFICATE MODULE:")
-    cert_modules = [m for m in modules if m.module_type == ModuleType.MULTILINE_CERT]
-    if cert_modules:
-        cert = cert_modules[0]
-        print(f"   Path: {cert.module_path}")
 """
 
 
@@ -108,9 +57,11 @@ def main():
     
     print(f"✓ Parsed {len(modules)} modules:")
     for m in modules:
-        print(f"  - {m.module_path} {m.index or ''} ({m.module_type.value})")
+        index_str = f" {m.index}" if m.index else ""
+        ff_str = f" [ff={m.form_factor}]" if m.form_factor else ""
+        print(f"  - {m.module_path}{index_str} ({m.module_type.value}){ff_str}")
     
-    print("\n✓ Parser working correctly!")
+    print("\n✓ Parser working correctly with form factor support!")
     print("📌 For full ingestion, run: python ingest_configs.py")
 
 

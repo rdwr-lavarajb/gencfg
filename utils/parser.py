@@ -38,6 +38,12 @@ class ModuleBlock:
     # Action command parameters (for ACTION type)
     action_params: List[str] = field(default_factory=list)
     
+    # Form factor support (VA, SA, VX, vADC)
+    form_factor: Optional[str] = None
+    
+    # Hypervisor support for VA (aws, azure, gcp, or None for all)
+    hypervisor_support: Optional[str] = None
+    
     def __repr__(self) -> str:
         index_str = f" {self.index}" if self.index else ""
         return f"<ModuleBlock {self.module_path}{index_str} ({self.module_type.value})>"
@@ -64,6 +70,8 @@ class ConfigParser:
         self.multiline_buffer: List[str] = []
         self.multiline_type: Optional[ModuleType] = None
         self.line_number: int = 0
+        self.detected_form_factor: Optional[str] = None  # Detected device form factor
+        self.header_lines: List[str] = []  # Store header lines for parsing
         
     def parse(self, config_text: str) -> List[ModuleBlock]:
         """
@@ -80,8 +88,13 @@ class ConfigParser:
         self.in_multiline = False
         self.multiline_buffer = []
         self.line_number = 0
+        self.detected_form_factor = None
+        self.header_lines = []
         
         lines = config_text.split('\n')
+        
+        # Detect form factor from header (first ~10 lines)
+        self._detect_form_factor(lines[:15])
         
         for line in lines:
             self.line_number += 1
@@ -130,6 +143,13 @@ class ConfigParser:
         
         # Parse the module path and optional index
         self._parse_module_path(line.strip())
+        
+        # Set form factor for this module
+        self.current_module.form_factor = self.detected_form_factor
+        
+        # Detect hypervisor support for VA modules
+        if self.detected_form_factor == 'VA':
+            self.current_module.hypervisor_support = self._detect_hypervisor(line.lower())
     
     def _parse_module_path(self, line: str):
         """Extract module path, index, and detect action commands"""
@@ -257,6 +277,60 @@ class ConfigParser:
         
         # Accumulate content
         self.multiline_buffer.append(line)
+    
+    def _detect_form_factor(self, header_lines: List[str]):
+        """
+        Detect device form factor from configuration header.
+        
+        Detection rules:
+        - VA: First line contains 'VA' as part of quoted string
+        - VX: Comment lines contain 'vADC Id 0'
+        - vADC: Comment lines contain 'vADC Id' with value > 0
+        - SA: Default if none of the above
+        """
+        self.header_lines = header_lines
+        
+        # Check first line for VA - look for "VA" in quotes or " VA" with space before
+        if header_lines:
+            first_line = header_lines[0]
+            # Match patterns like: "Application Switch VA" or "VA ..."
+            if re.search(r'\"[^\"]*\sVA\s*\"', first_line) or re.search(r'\"VA\s', first_line):
+                self.detected_form_factor = 'VA'
+                return
+        
+        # Check comment lines for vADC Id
+        for line in header_lines:
+            if line.strip().startswith('/*'):
+                # Look for vADC Id pattern
+                vadc_match = re.search(r'vADC\s+Id\s+(\d+)', line, re.IGNORECASE)
+                if vadc_match:
+                    vadc_id = int(vadc_match.group(1))
+                    if vadc_id == 0:
+                        self.detected_form_factor = 'VX'
+                    else:
+                        self.detected_form_factor = 'vADC'
+                    return
+        
+        # Default to SA
+        self.detected_form_factor = 'SA'
+    
+    def _detect_hypervisor(self, module_path_lower: str) -> Optional[str]:
+        """
+        Detect hypervisor support for VA modules based on module path.
+        
+        Args:
+            module_path_lower: Lowercase module path string
+            
+        Returns:
+            'aws', 'azure', 'gcp', or None (supports all)
+        """
+        if 'aws' in module_path_lower:
+            return 'aws'
+        elif 'azure' in module_path_lower:
+            return 'azure'
+        elif 'gcp' in module_path_lower:
+            return 'gcp'
+        return None
     
     def _finalize_current_module(self):
         """Finalize and save the current module"""

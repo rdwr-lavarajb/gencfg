@@ -136,7 +136,9 @@ class ConfigIngestion:
                 "multiline_metadata": module.multiline_metadata,
                 "action_params": module.action_params,
                 "start_line": module.start_line,
-                "end_line": module.end_line
+                "end_line": module.end_line,
+                "form_factor": module.form_factor,
+                "hypervisor_support": module.hypervisor_support
             })
         
         with open(output_file, 'w', encoding='utf-8') as f:
