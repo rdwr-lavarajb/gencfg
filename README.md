@@ -192,6 +192,23 @@ gencfg/
 - Action commands treated specially
 - Metadata extracted from multi-line modules
 
+---
+
+## Phase 2 Design (Approved)
+
+Phase 2 design is complete and approved. See [docs/PHASE2_DESIGN.md](docs/PHASE2_DESIGN.md) for full details.
+
+**Key Decisions:**
+- **AI Provider:** OpenAI GPT-4
+- **Placeholder Style:** Descriptive names (e.g., `{{management_ip_address}}`)
+- **Template Strategy:** One template with all optional parameters
+- **Default Threshold:** 70% occurrence
+- **Cost Estimate:** ~$2.50 per full run
+
+**Quick Reference:** [docs/PHASE2_QUICK_REF.md](docs/PHASE2_QUICK_REF.md)
+
+---
+
 ## License
 
 TBD
