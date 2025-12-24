@@ -109,6 +109,10 @@ class ConfigParser:
     def _process_line(self, line: str):
         """Process a single line of configuration"""
         
+        # Skip comment lines starting with '/*'
+        if line.lstrip().startswith('/*'):
+            return
+        
         # Handle multi-line content mode
         if self.in_multiline:
             self._process_multiline_content(line)
@@ -203,6 +207,10 @@ class ConfigParser:
         if not normalized:
             return
         
+        # Skip encrypted/sensitive content (admpw, certificates, keys)
+        if self._is_encrypted_content(normalized):
+            return
+        
         # Check if this line triggers multi-line content
         if self._check_multiline_trigger(normalized):
             return
@@ -210,27 +218,33 @@ class ConfigParser:
         # Add to sub-lines
         self.current_module.sub_lines.append(normalized)
     
+    def _is_encrypted_content(self, line: str) -> bool:
+        """Check if line contains encrypted/sensitive content to skip"""
+        line_lower = line.lower()
+        
+        # Skip admin password lines
+        if 'admpw' in line_lower:
+            return True
+        
+        # Skip certificate/key import lines
+        if any(keyword in line_lower for keyword in ['import cert', 'import key', 'import request']):
+            return True
+        
+        # Skip lines that look like encrypted hashes/keys
+        if line.startswith(('$', 'aes-', 'des-', 'sha-', 'md5-')):
+            return True
+        
+        return False
+    
     def _check_multiline_trigger(self, line: str) -> bool:
         """Check if line triggers multi-line content mode"""
         
-        # Check for certificate import
+        # Check for certificate/key import - SKIP these entirely
         cert_match = self.CERT_IMPORT_PATTERN.search(line)
         if cert_match:
-            self.in_multiline = True
-            self.multiline_type = ModuleType.MULTILINE_CERT
-            self.multiline_buffer = []
-            
-            # Extract metadata
-            cert_type = cert_match.group(1)  # cert, request, or key
-            cert_name = cert_match.group(2)
-            self.current_module.multiline_metadata = {
-                'cert_type': cert_type,
-                'cert_name': cert_name
-            }
+            # Mark module as multiline cert type but don't process content
             self.current_module.module_type = ModuleType.MULTILINE_CERT
-            
-            # Add this line to sub_lines (it's part of the command)
-            self.current_module.sub_lines.append(line)
+            # Skip the rest - don't enter multiline mode
             return True
         
         # Check for script import
@@ -332,6 +346,19 @@ class ConfigParser:
             return 'gcp'
         return None
     
+    def _module_only_has_encrypted_content(self) -> bool:
+        """Check if module only contains encrypted/sensitive content"""
+        if not self.current_module or not self.current_module.sub_lines:
+            return False
+        
+        # Check if all sub_lines contain sensitive keywords
+        for line in self.current_module.sub_lines:
+            line_lower = line.lower()
+            if 'admpw' in line_lower or 'passwd' in line_lower or 'password' in line_lower:
+                return True
+        
+        return False
+    
     def _finalize_current_module(self):
         """Finalize and save the current module"""
         
@@ -339,6 +366,17 @@ class ConfigParser:
             return
         
         self.current_module.end_line = self.line_number
+        
+        # Skip modules with encrypted/sensitive content
+        if self.current_module.module_type == ModuleType.MULTILINE_CERT:
+            # Don't save certificate/key modules
+            self.current_module = None
+            return
+        
+        # Skip modules that only contain encrypted content
+        if self._module_only_has_encrypted_content():
+            self.current_module = None
+            return
         
         # Determine final module type if not already set
         if self.current_module.module_type == ModuleType.STANDARD:
