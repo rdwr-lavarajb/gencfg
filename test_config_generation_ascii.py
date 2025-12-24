@@ -44,7 +44,7 @@ class ConfigGenerationTester:
     def test_vip_configurations(self):
         """Test VIP creation scenarios"""
         print("\n" + "=" * 80)
-        print("📦 TEST CATEGORY: VIP Configurations")
+        print(" TEST CATEGORY: VIP Configurations")
         print("=" * 80)
         
         test_cases = [
@@ -80,7 +80,7 @@ class ConfigGenerationTester:
     def test_server_configurations(self):
         """Test server and server group configurations"""
         print("\n" + "=" * 80)
-        print("[TEST CATEGORY: Server Configurations]")
+        print(" TEST CATEGORY: Server Configurations")
         print("=" * 80)
         
         test_cases = [
@@ -110,7 +110,7 @@ class ConfigGenerationTester:
     def test_network_configurations(self):
         """Test network/interface configurations"""
         print("\n" + "=" * 80)
-        print("[TEST CATEGORY: Network Configurations]")
+        print(" TEST CATEGORY: Network Configurations")
         print("=" * 80)
         
         test_cases = [
@@ -140,7 +140,7 @@ class ConfigGenerationTester:
     def test_ssl_configurations(self):
         """Test SSL/TLS configurations"""
         print("\n" + "=" * 80)
-        print("[TEST CATEGORY: SSL Configurations]")
+        print(" TEST CATEGORY: SSL Configurations")
         print("=" * 80)
         
         test_cases = [
@@ -164,7 +164,7 @@ class ConfigGenerationTester:
     def test_complex_scenarios(self):
         """Test complex multi-component scenarios"""
         print("\n" + "=" * 80)
-        print("[TEST CATEGORY: Complex Scenarios]")
+        print(" TEST CATEGORY: Complex Scenarios")
         print("=" * 80)
         
         test_cases = [
@@ -194,7 +194,7 @@ class ConfigGenerationTester:
     def test_edge_cases(self):
         """Test edge cases and error handling"""
         print("\n" + "=" * 80)
-        print("[TEST CATEGORY: Edge Cases]")
+        print(" TEST CATEGORY: Edge Cases")
         print("=" * 80)
         
         test_cases = [
@@ -229,7 +229,7 @@ class ConfigGenerationTester:
         expected_params = test_case.get('expected_params', {})
         should_fail = test_case.get('should_fail', False)
         
-        print(f"\n[Test] {test_name}")
+        print(f"\n Test: {test_name}")
         print(f"   Requirement: {requirement}")
         
         # Create output directory for test configs
@@ -337,7 +337,7 @@ class ConfigGenerationTester:
             'status': 'PASS',
             'message': message
         })
-        print(f"   [PASS] {message}")
+        print(f"    PASS: {message}")
     
     def record_fail(self, test_name, message):
         """Record a failing test"""
@@ -347,7 +347,7 @@ class ConfigGenerationTester:
             'status': 'FAIL',
             'message': message
         })
-        print(f"   [FAIL] {message}")
+        print(f"    FAIL: {message}")
     
     def print_summary(self):
         """Print test summary"""
@@ -355,18 +355,18 @@ class ConfigGenerationTester:
         pass_rate = (self.passed / total * 100) if total > 0 else 0
         
         print("\n" + "=" * 80)
-        print("📊 TEST SUMMARY")
+        print(" TEST SUMMARY")
         print("=" * 80)
         print(f"\nTotal Tests: {total}")
-        print(f"[+] Passed: {self.passed}")
-        print(f"[-] Failed: {self.failed}")
-        print(f"[*] Pass Rate: {pass_rate:.1f}%")
+        print(f" Passed: {self.passed}")
+        print(f" Failed: {self.failed}")
+        print(f" Pass Rate: {pass_rate:.1f}%")
         
         if self.failed > 0:
-            print(f"\n⚠️  Failed Tests:")
+            print(f"\n  Failed Tests:")
             for result in self.test_results:
                 if result['status'] == 'FAIL':
-                    print(f"   • {result['name']}: {result['message']}")
+                    print(f"    {result['name']}: {result['message']}")
         
         # Save results to file
         output_dir = Path("output")
@@ -384,10 +384,11 @@ class ConfigGenerationTester:
                 'tests': self.test_results
             }, f, indent=2)
         
-        print(f"\n💾 Test results saved to: {results_file}")
+        print(f"\n Test results saved to: {results_file}")
         print()
 
 
 if __name__ == "__main__":
     tester = ConfigGenerationTester()
     tester.run_all_tests()
+

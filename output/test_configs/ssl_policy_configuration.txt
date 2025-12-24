@@ -1,0 +1,35 @@
+# Test: SSL policy configuration
+# Requirement: Create SSL policy for HTTPS offload
+# Modules Generated: 5
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:21.144482
+# Requirement: Create SSL policy for HTTPS offload
+#
+
+
+/c/slb/ssl
+
+/c/slb/ssl/adv
+
+/c/slb/ssl/authpol {{index}}
+
+/c/slb/ssl/sslpol 1
+
+/c/sys/access/https/tlsver/tls10 {{index}}
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/slb/ssl
+#   - /c/slb/ssl/adv
+#   - /c/slb/ssl/authpol
+#   - /c/slb/ssl/sslpol
+#   - /c/sys/access/https/tlsver/tls10

@@ -1,0 +1,52 @@
+# Test: VIP with SSL on port 443
+# Requirement: Create VIP 10.1.1.100 on port 443 with SSL offload
+# Modules Generated: 9
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:08.234964
+# Requirement: Create VIP 10.1.1.100 on port 443 with SSL offload
+#
+
+
+/c/slb/adv
+
+/c/slb/group 1
+add 10
+
+/c/slb/real 1
+rip 10.1.1.100
+
+/c/slb/ssl/adv
+
+/c/slb/ssl/sslpol 1
+
+/c/slb/virt 1
+vip 10.1.1.100
+
+/c/slb/virt 1/service 443 ssl
+	group 1
+	rport 443
+
+/c/sys/access/https/tlsver/tls10 {{index}}
+
+/c/sys/access/https/tlsver/tls11 {{index}}
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/slb/adv
+#   - /c/slb/group
+#   - /c/slb/real
+#   - /c/slb/ssl/adv
+#   - /c/slb/ssl/sslpol
+#   - /c/slb/virt
+#   - /c/slb/virt/service
+#   - /c/sys/access/https/tlsver/tls10
+#   - /c/sys/access/https/tlsver/tls11

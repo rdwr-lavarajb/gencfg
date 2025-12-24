@@ -199,18 +199,24 @@ class ParameterMatcher:
         """
         score = 0.0
         
+        # Extract keywords from parameter name first (needed for semantic matching)
+        param_keywords = self._extract_keywords(param_name)
+        
         # 1. Type compatibility (base score)
         param_type = param_info.get('type', 'string')
         if value_type == param_type:
             score += 0.3  # Exact type match
         elif value_type in self.TYPE_COMPATIBILITY.get(param_type, []):
-            score += 0.2  # Compatible type
+            # Check if value type semantically matches parameter name
+            # E.g., 'port' value type for 'real_port' parameter should score higher
+            if value_type in param_keywords:
+                score += 0.35  # Semantic match - boost compatible type
+            else:
+                score += 0.2  # Regular compatible type
         else:
             score += 0.1  # Generic match
         
         # 2. Keyword matching in parameter name
-        param_keywords = self._extract_keywords(param_name)
-        
         # Check context if available
         context = ""
         if hasattr(extracted, 'context'):
@@ -239,9 +245,15 @@ class ParameterMatcher:
     
     def _extract_keywords(self, param_name: str) -> List[str]:
         """Extract keywords from parameter name."""
-        # Split on underscores and camelCase
-        parts = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', param_name)
-        keywords = [p.lower() for p in parts if len(p) > 2]
+        # First split on underscores
+        parts = param_name.split('_')
+        keywords = []
+        
+        # Then split each part on camelCase
+        for part in parts:
+            camel_parts = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z][a-z]|\b)', part)
+            keywords.extend([p.lower() for p in camel_parts if len(p) > 2])
+        
         return keywords
     
     def _validate_value(self, value: Any, param_info: Dict[str, Any]) -> bool:

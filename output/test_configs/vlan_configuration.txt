@@ -1,0 +1,36 @@
+# Test: VLAN configuration
+# Requirement: Create VLAN 100 with IP 10.0.100.1/24
+# Modules Generated: 5
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:17.077628
+# Requirement: Create VLAN 100 with IP 10.0.100.1/24
+#
+
+
+/c/l2/lacp
+
+/c/l2/mtu {{index}}
+
+/c/l2/stg {{index}}
+
+/c/l2/vlan 1
+
+/c/port 1
+pvid 100
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/l2/lacp
+#   - /c/l2/mtu
+#   - /c/l2/stg
+#   - /c/l2/vlan
+#   - /c/port

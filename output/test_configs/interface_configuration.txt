@@ -1,0 +1,43 @@
+# Test: Interface configuration
+# Requirement: Configure interface with IP 172.16.0.1
+# Modules Generated: 5
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:18.653737
+# Requirement: Configure interface with IP 172.16.0.1
+#
+
+
+/c/l3/gw {{index}}
+addr 172.16.0.1
+intr 16
+
+/c/l3/if 1
+addr 172.16.0.1
+
+/c/l3/nwf {{index}}
+addr 172.16.0.1
+
+/c/l3/ospf/if {{index}}
+aindex 16
+prio 0
+cost 1
+
+/c/sys/mmgmt/net {{index}}
+addr 172.16.0.1
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/l3/gw
+#   - /c/l3/if
+#   - /c/l3/nwf
+#   - /c/l3/ospf/if
+#   - /c/sys/mmgmt/net

@@ -1,0 +1,53 @@
+# Test: Complete load balancing setup
+# Requirement: Setup load balancer with VIP 10.1.1.100 port 443 SSL, backend servers 192.168.1.10 and 192.168.1.11
+# Modules Generated: 9
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:24.151387
+# Requirement: Setup load balancer with VIP 10.1.1.100 port 443 SSL, backend servers 192.168.1.10 and 192.168.1.11
+#
+
+
+/c/slb/adv
+
+/c/slb/group 1
+add 100
+
+/c/slb/gslb/dnsresvip {{index}}
+vip 10.1.1.100
+
+/c/slb/gslb/network {{index}}
+
+/c/slb/real 1
+rip 10.1.1.100
+
+/c/slb/ssl/sslpol 1
+
+/c/slb/virt 1
+vip 10.1.1.100
+
+/c/slb/virt 1/service 443 ssl
+	group 1
+	rport 443
+
+/c/sys/access/https/tlsver/tls11 {{index}}
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/slb/adv
+#   - /c/slb/group
+#   - /c/slb/gslb/dnsresvip
+#   - /c/slb/gslb/network
+#   - /c/slb/real
+#   - /c/slb/ssl/sslpol
+#   - /c/slb/virt
+#   - /c/slb/virt/service
+#   - /c/sys/access/https/tlsver/tls11

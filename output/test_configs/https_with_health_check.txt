@@ -1,0 +1,29 @@
+# Test: HTTPS with health check [FAILED]
+# Requirement: Configure HTTPS VIP 10.10.10.10 with health monitoring
+# Error: Missing expected modules: ['/c/slb/virt']
+# Generated modules: ['/c/slb/advhc/health', '/c/slb/ssl/adv', '/c/slb/ssl/sslpol', '/c/sys/access/https/cert', '/c/sys/access/https/tlsver/tls10', '/c/sys/access/https/tlsver/tls11']
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:26.703845
+# Requirement: Configure HTTPS VIP 10.10.10.10 with health monitoring
+#
+
+
+/c/slb/advhc/health {{index}}
+inter 10
+
+/c/slb/ssl/adv
+
+/c/slb/ssl/sslpol 1
+
+/c/sys/access/https/cert {{index}}
+
+/c/sys/access/https/tlsver/tls10 {{index}}
+
+/c/sys/access/https/tlsver/tls11 {{index}}
+
+
+apply
+save

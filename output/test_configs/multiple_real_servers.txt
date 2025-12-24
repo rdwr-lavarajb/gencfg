@@ -1,0 +1,44 @@
+# Test: Multiple real servers
+# Requirement: Configure backend servers 192.168.2.10, 192.168.2.11, 192.168.2.12
+# Modules Generated: 7
+# Validation: VALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:15.551553
+# Requirement: Configure backend servers 192.168.2.10, 192.168.2.11, 192.168.2.12
+#
+
+
+/c/slb/adv
+
+/c/slb/group 1
+add 2
+
+/c/slb/gslb/network {{index}}
+
+/c/slb/layer7/slb
+
+/c/slb/real 1
+rip 192.168.2.10
+
+/c/slb/virt 1
+vip 192.168.2.10
+
+/c/sys/gel
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/slb/adv
+#   - /c/slb/group
+#   - /c/slb/gslb/network
+#   - /c/slb/layer7/slb
+#   - /c/slb/real
+#   - /c/slb/virt
+#   - /c/sys/gel

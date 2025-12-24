@@ -98,6 +98,13 @@ class ValueExtractor:
                 if self._is_likely_parameter_value(ev.value, ev.context)
             ]
         
+        # Post-process IP addresses (filter out invalid IPs)
+        if 'ipv4_address' in extracted:
+            extracted['ipv4_address'] = [
+                ev for ev in extracted['ipv4_address']
+                if self._is_valid_ip(ev.value)
+            ]
+        
         return extracted
     
     def _get_context(self, text: str, value: str, window: int = 30) -> str:
@@ -159,6 +166,20 @@ class ValueExtractor:
             return True
         
         return False
+    
+    def _is_valid_ip(self, ip: str) -> bool:
+        """Check if IP address is valid."""
+        try:
+            parts = ip.split('.')
+            if len(parts) != 4:
+                return False
+            for part in parts:
+                num = int(part)
+                if num < 0 or num > 255:
+                    return False
+            return True
+        except (ValueError, AttributeError):
+            return False
     
     def extract_names(self, requirement: str) -> List[ExtractedValue]:
         """

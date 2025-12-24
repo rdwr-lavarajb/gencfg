@@ -1,0 +1,44 @@
+# Test: Server group configuration
+# Requirement: Create server group with member 10.0.0.5
+# Modules Generated: 6
+# Validation: INVALID
+
+================================================================================
+
+# Generated Configuration
+# Timestamp: 2025-12-24T12:48:13.886894
+# Requirement: Create server group with member 10.0.0.5
+#
+
+
+/c/l2/lacp
+
+/c/slb/group 1
+add 10
+
+/c/slb/gslb/network {{index}}
+
+/c/slb/layer7/slb
+
+/c/slb/real 1
+rip 10.0.0.5
+
+/c/slb/virt 1
+vip 10.0.0.5
+
+
+apply
+save
+
+
+================================================================================
+# Module List:
+#   - /c/l2/lacp
+#   - /c/slb/group
+#   - /c/slb/gslb/network
+#   - /c/slb/layer7/slb
+#   - /c/slb/real
+#   - /c/slb/virt
+
+# Validation Errors:
+#   - ValidationError(line_number=0, module_path='/c/slb/virt', error_type='type', severity='error', message='Invalid port for real_port: 0', suggestion='Expected port format')

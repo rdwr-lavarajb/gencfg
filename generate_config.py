@@ -152,6 +152,36 @@ def generate_config_from_requirement(
         for i, rt in enumerate(ranked_templates[:5], 1):
             print(f"   {i}. {rt.template.module_path} (score: {rt.relevance_score:.2f})")
     
+    # Add SSL policy module if SSL is mentioned in requirement
+    ssl_keywords = ['ssl', 'https', 'tls', 'certificate', 'cert']
+    if any(kw in requirement.lower() for kw in ssl_keywords):
+        # Check if SSL policy module is already present
+        present_paths = {rt.template.module_path for rt in ranked_templates}
+        if '/c/slb/ssl/sslpol' not in present_paths:
+            # Add SSL policy module
+            ssl_results = vector_store.search_by_path('/c/slb/ssl/sslpol', top_k=1)
+            if ssl_results['ids']:
+                from phase4.template_retriever import RetrievedTemplate
+                from phase4.relevance_ranker import RankedTemplate
+                ssl_template = RetrievedTemplate(
+                    module_path=ssl_results['metadatas'][0].get('module_path', ''),
+                    similarity_score=0.80,
+                    template=ssl_results['metadatas'][0].get('template', {}),
+                    parameters=ssl_results['metadatas'][0].get('parameters', {}),
+                    defaults=ssl_results['metadatas'][0].get('learned_defaults', {}),
+                    metadata=ssl_results['metadatas'][0],
+                    document_text=ssl_results['documents'][0]
+                )
+                ranked_templates.append(RankedTemplate(
+                    template=ssl_template,
+                    relevance_score=0.80,
+                    score_breakdown={'ssl_requirement': 0.80},
+                    explanation=f"SSL policy for HTTPS/SSL requirement",
+                    rank=len(ranked_templates) + 1
+                ))
+                if verbose:
+                    print(f"   ✅ Added SSL policy module for SSL requirement")
+    
     # Step 2: Extract values from requirement
     if verbose:
         print("\nStep 2/5: Extracting values from requirement...")
