@@ -1,26 +1,30 @@
 # Test: VIP with HTTPS
 # Requirement: Configure HTTPS virtual server 172.16.1.50
-# Modules Generated: 8
+# Modules Generated: 9
 # Validation: VALID
 
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:09.780478
+# Timestamp: 2025-12-24T13:20:18.528628
 # Requirement: Configure HTTPS virtual server 172.16.1.50
 #
 
 
+/c/slb/real 1
+rip 1.1.1.1
+
 /c/slb/group 1
 add 16
-
-/c/slb/real 1
-rip 172.16.1.50
 
 /c/slb/ssl/sslpol 1
 
 /c/slb/virt 1
 vip 172.16.1.50
+
+/c/slb/virt 1/service 1 ssl
+	group 1
+	rport 1
 
 /c/sys/access/https/cert {{index}}
 
@@ -30,17 +34,13 @@ vip 172.16.1.50
 
 /fzqoSCkHjAcMRowGAYDVQQDDBFXZWJNYW5hZ2VtZW50Q2VydIIEaD2mVjALBgNV
 
-
-apply
-save
-
-
 ================================================================================
 # Module List:
-#   - /c/slb/group
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/ssl/sslpol
 #   - /c/slb/virt
+#   - /c/slb/virt/service
 #   - /c/sys/access/https/cert
 #   - /c/sys/access/https/tlsver/tls10
 #   - /c/sys/access/https/tlsver/tls11

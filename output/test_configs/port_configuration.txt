@@ -6,7 +6,7 @@
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:19.929494
+# Timestamp: 2025-12-24T13:20:28.084761
 # Requirement: Configure port 1 with 1000Mbps
 #
 
@@ -22,11 +22,6 @@ pvid 1
 /c/sys/mmgmt
 
 /c/sys/mmgmt/port
-
-
-apply
-save
-
 
 ================================================================================
 # Module List:

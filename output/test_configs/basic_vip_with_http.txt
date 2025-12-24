@@ -1,42 +1,32 @@
 # Test: Basic VIP with HTTP
 # Requirement: Create VIP 192.168.1.100 on port 80
-# Modules Generated: 6
+# Modules Generated: 4
 # Validation: VALID
 
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:06.739244
+# Timestamp: 2025-12-24T13:20:15.228762
 # Requirement: Create VIP 192.168.1.100 on port 80
 #
 
 
-/c/l2/vlan 1
+/c/slb/real 1
+rip 1.1.1.1
 
 /c/slb/group 1
 add 1
 
-/c/slb/gslb/dnsresvip {{index}}
-vip 192.168.1.100
-
-/c/slb/gslb/network {{index}}
-
-/c/slb/real 1
-rip 192.168.1.100
-
 /c/slb/virt 1
 vip 192.168.1.100
 
-
-apply
-save
-
+/c/slb/virt 1/service 80 http
+	group 1
+	rport 80
 
 ================================================================================
 # Module List:
-#   - /c/l2/vlan
-#   - /c/slb/group
-#   - /c/slb/gslb/dnsresvip
-#   - /c/slb/gslb/network
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/virt
+#   - /c/slb/virt/service

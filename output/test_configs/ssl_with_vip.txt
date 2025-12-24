@@ -6,16 +6,16 @@
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:22.519827
+# Timestamp: 2025-12-24T13:20:30.693854
 # Requirement: Setup SSL offload for VIP 10.1.1.50 on port 443
 #
 
 
+/c/slb/real 1
+rip 1.1.1.1
+
 /c/slb/group 1
 add 10
-
-/c/slb/real 1
-rip 10.1.1.50
 
 /c/slb/ssl
 
@@ -34,15 +34,10 @@ vip 10.1.1.50
 
 /c/sys/access/https/tlsver/tls11 {{index}}
 
-
-apply
-save
-
-
 ================================================================================
 # Module List:
-#   - /c/slb/group
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/ssl
 #   - /c/slb/ssl/adv
 #   - /c/slb/ssl/sslpol

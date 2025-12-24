@@ -6,36 +6,33 @@
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:12.529822
+# Timestamp: 2025-12-24T13:20:21.545466
 # Requirement: Add real server 192.168.1.10
 #
 
 
-/c/slb/adv
+/c/slb/real 1
+rip 1.1.1.1
 
 /c/slb/group 1
 add 1
 
-/c/slb/gslb/network {{index}}
-
-/c/slb/pip/add 69.191.242.150 1
-
-/c/slb/real 1
-rip 192.168.1.10
-
 /c/slb/virt 1
 vip 192.168.1.10
 
+/c/slb/virt 1/service 10 http
+	group 1
+	rport 10
 
-apply
-save
+/c/slb/adv
 
+/c/slb/pip/add 69.191.242.150 1
 
 ================================================================================
 # Module List:
-#   - /c/slb/adv
-#   - /c/slb/group
-#   - /c/slb/gslb/network
-#   - /c/slb/pip/add
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/virt
+#   - /c/slb/virt/service
+#   - /c/slb/adv
+#   - /c/slb/pip/add

@@ -39,7 +39,8 @@ class ParameterMatcher:
         extracted_values: Dict[str, List[Any]],
         defaults: Dict[str, Any] = None,
         use_defaults: bool = True,
-        auto_fill_high_confidence: bool = True
+        auto_fill_high_confidence: bool = True,
+        assigned_values: Dict[str, Any] = None
     ) -> List[ValueAssignment]:
         """
         Match extracted values to template parameters.
@@ -50,12 +51,14 @@ class ParameterMatcher:
             defaults: Learned defaults from template
             use_defaults: Whether to use defaults for missing values
             auto_fill_high_confidence: Auto-fill parameters with >90% confidence defaults
+            assigned_values: Dict tracking values assigned across modules (to prevent conflicts)
             
         Returns:
             List of ValueAssignment objects
         """
         assignments = []
         defaults = defaults or {}
+        assigned_values = assigned_values or {}
         
         # Track which values have been used
         used_values = {vtype: set() for vtype in extracted_values.keys()}
@@ -90,6 +93,30 @@ class ParameterMatcher:
                 extracted_values,
                 used_values
             )
+            
+            # Check for VIP/RIP conflict - prioritize VIP when only one IP available
+            if assignment and 'ip' in param_name.lower():
+                ip_value = assignment.value
+                # If this is RIP parameter and only one IP was extracted, reserve it for VIP
+                if 'real' in param_name.lower():
+                    # Count available IPs
+                    ip_count = len(extracted_values.get('ipv4_address', []))
+                    if ip_count == 1:
+                        # Only one IP - reserve for VIP, use placeholder for RIP
+                        assignment = ValueAssignment(
+                            parameter_name=param_name,
+                            parameter_type=param_info.get('type', 'string'),
+                            value='1.1.1.1',
+                            source='placeholder',
+                            confidence=0.5,
+                            original_param_key=param_info.get('original_key', param_name)
+                        )
+                    else:
+                        # Multiple IPs available - use this one and track it
+                        assigned_values['real_ip_address'] = assignment.value
+                elif 'virtual' in param_name.lower():
+                    # VIP gets the actual IP
+                    assigned_values['virtual_ip_address'] = assignment.value
             
             if assignment:
                 assignments.append(assignment)

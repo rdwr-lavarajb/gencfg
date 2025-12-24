@@ -74,6 +74,34 @@ def generate_config_from_requirement(
     # Rank templates
     ranked_templates = ranker.rank(retrieved_templates, parsed_req)
     
+    # Filter out GSLB modules for basic load balancing (not global load balancing)
+    # GSLB should only be included if explicitly mentioned
+    gslb_keywords = ['global', 'gslb', 'multi-site', 'geo', 'datacenter']
+    is_gslb_requirement = any(kw in requirement.lower() for kw in gslb_keywords)
+    
+    # Filter out VLAN modules for basic SLB (unless explicitly mentioned)
+    # Be careful not to match "port 80" as VLAN requirement - must match full phrases
+    is_vlan_requirement = any(phrase in requirement.lower() for phrase in [
+        'vlan', 'layer 2', 'layer2', 'l2 ', 'configure port', 'port config'
+    ])
+    
+    if not is_gslb_requirement or not is_vlan_requirement:
+        original_count = len(ranked_templates)
+        filtered = []
+        for rt in ranked_templates:
+            module_path = rt.template.module_path
+            # Filter GSLB if not needed
+            if not is_gslb_requirement and '/gslb/' in module_path:
+                continue
+            # Filter VLAN if not needed
+            if not is_vlan_requirement and '/l2/vlan' in module_path:
+                continue
+            filtered.append(rt)
+        
+        ranked_templates = filtered
+        if verbose and len(ranked_templates) < original_count:
+            print(f"   Filtered out {original_count - len(ranked_templates)} non-essential module(s)")
+    
     if not ranked_templates:
         return {
             'config': None,
@@ -219,6 +247,7 @@ def generate_config_from_requirement(
     
     # First pass: Create assignment lists without assembling yet
     module_assignments = []
+    assigned_values = {}  # Track values assigned across modules to prevent conflicts
     
     for ranked_template in ranked_templates:
         # Get parameters and defaults from the retrieved template
@@ -228,7 +257,8 @@ def generate_config_from_requirement(
             retrieved.parameters,
             extracted_values_dict,
             defaults=retrieved.defaults,
-            auto_fill_high_confidence=True
+            auto_fill_high_confidence=True,
+            assigned_values=assigned_values  # Pass tracking dict
         )
         
         #Determine index for this module
@@ -350,9 +380,10 @@ def generate_config_from_requirement(
     
     for module in assembled_modules:
         if module.module_path == '/c/slb/virt':
-            # Check if port and SSL are in the requirement
+            # Check if port exists in the VIP
             port = None
-            ssl_required = 'ssl' in requirement.lower()
+            ssl_required = 'ssl' in requirement.lower() or 'https' in requirement.lower()
+            http_required = 'http' in requirement.lower() and not ssl_required
             group_id = None
             
             # Find port and group in assignments
@@ -362,13 +393,17 @@ def generate_config_from_requirement(
                 elif assignment.parameter_name == 'service_group_id':
                     group_id = assignment.value
             
-            if port and ssl_required:
+            # Create service submodule if port is specified
+            if port:
                 # Get virt index from metadata
                 virt_index = module.metadata.get('index', 1)
                 
+                # Determine protocol
+                protocol = 'ssl' if ssl_required else 'http'
+                
                 # Create service submodule
                 service_config_lines = [
-                    f"/c/slb/virt {virt_index}/service {port} ssl",
+                    f"/c/slb/virt {virt_index}/service {port} {protocol}",
                     f"\tgroup {group_id if group_id else 1}",
                     f"\trport {port}"
                 ]
@@ -385,7 +420,7 @@ def generate_config_from_requirement(
                     ValueAssignment(
                         parameter_name='protocol',
                         parameter_type='string',
-                        value='ssl',
+                        value=protocol,
                         source='user',
                         confidence=0.95,
                         original_param_key='protocol'
@@ -451,7 +486,7 @@ def generate_config_from_requirement(
         ordered_modules,
         requirement=requirement,
         include_header=True,
-        include_footer=True,
+        include_footer=False,  # Don't include apply/save commands
         add_comments=True
     )
     

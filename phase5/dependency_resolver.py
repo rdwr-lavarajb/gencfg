@@ -76,9 +76,29 @@ class DependencyResolver:
         
         return graph
     
+    def _get_module_order_priority(self, module_path: str) -> int:
+        """Get ordering priority for module (lower number = earlier)."""
+        # Define logical ordering based on module types
+        if '/l2/vlan' in module_path:
+            return 1  # VLANs first
+        elif '/slb/real' in module_path:
+            return 2  # Real servers before groups
+        elif '/slb/group' in module_path:
+            return 3  # Groups after real servers
+        elif '/slb/virt' in module_path and '/service' not in module_path:
+            return 4  # VIP after groups
+        elif '/slb/virt' in module_path and '/service' in module_path:
+            return 5  # Service submodules after VIP
+        elif '/slb/ssl' in module_path:
+            return 3  # SSL with groups
+        elif '/l3/' in module_path:
+            return 1  # Layer 3 with VLANs
+        else:
+            return 10  # Other modules last
+    
     def _topological_sort(self, graph: Dict[str, DependencyInfo]) -> List[str]:
         """
-        Topological sort of dependency graph.
+        Topological sort of dependency graph with logical ordering.
         
         Returns modules in dependency order (dependencies first).
         """
@@ -90,13 +110,14 @@ class DependencyResolver:
                 if dep in in_degree:
                     in_degree[dep] += 1
         
-        # Find nodes with no incoming edges
+        # Find nodes with no incoming edges and sort by priority
         queue = [path for path, degree in in_degree.items() if degree == 0]
+        queue.sort(key=lambda p: (self._get_module_order_priority(p), p))
         result = []
         
         while queue:
-            # Sort queue for consistent ordering
-            queue.sort()
+            # Sort queue by priority and then alphabetically
+            queue.sort(key=lambda p: (self._get_module_order_priority(p), p))
             node = queue.pop(0)
             result.append(node)
             

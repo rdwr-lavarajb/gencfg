@@ -6,36 +6,33 @@
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:25.280144
+# Timestamp: 2025-12-24T13:20:32.937079
 # Requirement: Create web server farm on 172.16.1.100 port 80 with 3 backend servers
 #
 
 
-/c/slb/adv
+/c/slb/real 1
+rip 1.1.1.1
 
 /c/slb/group 1
 add 16
 
-/c/slb/gslb/network {{index}}
-
-/c/slb/layer7/slb
-
-/c/slb/real 1
-rip 172.16.1.100
-
 /c/slb/virt 1
 vip 172.16.1.100
 
+/c/slb/virt 1/service 80 http
+	group 1
+	rport 80
 
-apply
-save
+/c/slb/adv
 
+/c/slb/layer7/slb
 
 ================================================================================
 # Module List:
-#   - /c/slb/adv
-#   - /c/slb/group
-#   - /c/slb/gslb/network
-#   - /c/slb/layer7/slb
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/virt
+#   - /c/slb/virt/service
+#   - /c/slb/adv
+#   - /c/slb/layer7/slb

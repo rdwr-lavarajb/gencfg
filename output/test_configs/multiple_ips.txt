@@ -6,7 +6,7 @@
 ================================================================================
 
 # Generated Configuration
-# Timestamp: 2025-12-24T12:48:31.476074
+# Timestamp: 2025-12-24T13:20:38.231156
 # Requirement: Setup VIPs 10.0.0.1, 10.0.0.2, 10.0.0.3
 #
 
@@ -14,32 +14,31 @@
 /c/l3/if 1
 addr 10.0.0.1
 
-/c/slb/adv
+/c/slb/real 1
+rip 10.0.0.1
 
 /c/slb/group 1
 add 10
 
-/c/slb/gslb/network {{index}}
-
-/c/slb/real 1
-rip 10.0.0.1
-
 /c/slb/virt 1
 vip 10.0.0.1
 
+/c/slb/virt 1/service 0 http
+	group 1
+	rport 0
 
-apply
-save
-
+/c/slb/adv
 
 ================================================================================
 # Module List:
 #   - /c/l3/if
-#   - /c/slb/adv
-#   - /c/slb/group
-#   - /c/slb/gslb/network
 #   - /c/slb/real
+#   - /c/slb/group
 #   - /c/slb/virt
+#   - /c/slb/virt/service
+#   - /c/slb/adv
 
 # Validation Errors:
+#   - ValidationError(line_number=20, module_path='/c/slb/virt 1/service 0 http', error_type='type', severity='error', message='Invalid port number: 0', suggestion='Port must be between 1 and 65535')
 #   - ValidationError(line_number=0, module_path='/c/slb/virt', error_type='type', severity='error', message='Invalid port for real_port: 0', suggestion='Expected port format')
+#   - ValidationError(line_number=0, module_path='/c/slb/virt/service', error_type='type', severity='error', message='Invalid port for port: 0', suggestion='Expected port format')
